@@ -7,22 +7,24 @@
 #include "stdio.h"
 /* your include end */
 
-#define BUF_LEN   128
+#define BUF_LEN   50
 #define DBGprintf printf
 
 static struct EzCslHandleStruct {
-    uint8_t appname_len;
+    uint8_t prefix_len;
     char buf[BUF_LEN];
     uint16_t bufp;
     uint16_t bufl;
 } ezhdl;
-#define BUFP_RST() ezhdl.bufp = ezhdl.appname_len
+#define BUFP_RST() ezhdl.bufp = ezhdl.prefix_len
 
+/* ez console port ,user need to achieve this himself */
 void ezport_receive_a_char(char c);
 void ezport_send_str(char *str, uint16_t len);
 
-void ezcsl_init(const char *appname);
+void ezcsl_init(const char *prefix);
 static void ezcsl_send_printf(const char *fmt, ...);
+static void ezcsl_submit(void);
 
 
 /**
@@ -37,51 +39,37 @@ void ezport_receive_a_char(char c)
     if (!direction_flag) {
         if (c >= 0x20 && c <= 0x7e && ezhdl.bufl < BUF_LEN) {
             /* visible char */
-            // if (ezhdl.bufp == ezhdl.bufl) { // add
-            //     ezhdl.buf[ezhdl.bufp] = c;
-            //     ezhdl.bufp++;
-            //     ezhdl.bufl++;
-            //     if (ezhdl.bufp >= BUF_LEN) {
-            //         ezhdl.bufp = 0;
-            //     }
-            //     ezhdl.buf[ezhdl.bufp] = 0;
-            //     ezport_send_str(&c, 1);
-            // } else { // insert
-                
-                for (uint16_t i = ezhdl.bufl; i >= ezhdl.bufp+1; i--) {
-                        ezhdl.buf[i]=ezhdl.buf[i-1];
-                }
-                ezhdl.buf[ezhdl.bufp] = c;
-                ezcsl_send_printf("\033[s");
+            for (uint16_t i = ezhdl.bufl; i >= ezhdl.bufp + 1; i--) {
+                ezhdl.buf[i] = ezhdl.buf[i - 1];
+            }
+            ezhdl.buf[ezhdl.bufp] = c;
+            ezcsl_send_printf("\033[s");
 
-                ezport_send_str(ezhdl.buf+ezhdl.bufp, ezhdl.bufl-ezhdl.bufp+1);
-                ezcsl_send_printf("\033[u\033[1C");
-                ezhdl.bufp++;
-                ezhdl.bufl++;
-                
-            // }
-        } else if (c == 0x08) {
+            ezport_send_str(ezhdl.buf + ezhdl.bufp, ezhdl.bufl - ezhdl.bufp + 1);
+            ezcsl_send_printf("\033[u\033[1C");
+            ezhdl.bufp++;
+            ezhdl.bufl++;
+        } else if (c == 0x08 && ezhdl.bufp > ezhdl.prefix_len) { // cannot delete the prefix
             /* backspace */
             ezcsl_send_printf("\033[1D\033[s");
-            if (ezhdl.bufp > 0) {
-                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
-                        ezhdl.buf[i] = ezhdl.buf[i + 1];
-                        ezport_send_str(ezhdl.buf + i, 1);
-                }
-                ezhdl.bufp--;
-                ezhdl.bufl--;
+            for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
+                ezhdl.buf[i] = ezhdl.buf[i + 1];
+                ezport_send_str(ezhdl.buf + i, 1);
             }
+            ezhdl.bufp--;
+            ezhdl.bufl--;
             ezcsl_send_printf("\033[K\033[u");
         } else if (c == 0x0d) {
             /* enter */
-            DBGprintf("\ncurrent buf is :%s", ezhdl.buf);
+            ezhdl.buf[ezhdl.bufp] = 0; // cmd end
+            ezcsl_submit();
         } else if (c == 0) {
             direction_flag = 1;
         }
     } else {
         if (c == 0x4b) {
             /* left arrow */
-            if (ezhdl.bufp > 0) {
+            if (ezhdl.bufp > ezhdl.prefix_len) {
                 ezcsl_send_printf("\033[1D");
                 ezhdl.bufp--;
             }
@@ -96,6 +84,12 @@ void ezport_receive_a_char(char c)
     }
 }
 
+/**
+ * use this function to send
+ * @param str str need to send
+ * @param len the length of the str
+ * @author Jinlin Deng
+ */
 void ezport_send_str(char *str, uint16_t len)
 {
     /**
@@ -107,16 +101,23 @@ void ezport_send_str(char *str, uint16_t len)
 }
 
 
-void ezcsl_init(const char *appname)
+/**
+ * init
+ * @param
+ * @author Jinlin Deng
+ */
+void ezcsl_init(const char *prefix)
 {
-    ezhdl.appname_len = strlen(appname);
+    ezhdl.prefix_len = strlen(prefix);
     uint16_t i;
     for (i = 0; i < BUF_LEN; i++) {
-        ezhdl.buf[i] = 0;
+        ezhdl.buf[i] = i < ezhdl.prefix_len ? prefix[i] : 0;
     }
-    ezhdl.bufp = 0;
-    ezhdl.bufl = 0;
+    ezhdl.bufp = ezhdl.prefix_len;
+    ezhdl.bufl = ezhdl.prefix_len;
+    ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
 }
+
 
 static void ezcsl_send_printf(const char *fmt, ...)
 {
@@ -127,4 +128,16 @@ static void ezcsl_send_printf(const char *fmt, ...)
     printed = vsprintf(dat_buf, fmt, args);
     va_end(args);
     ezport_send_str(dat_buf, printed);
+}
+
+
+static void ezcsl_submit(void)
+{
+    ezcsl_send_printf("\r\n");
+    DBGprintf("cmd submit! (%s)", ezhdl.buf); // 模拟执行
+    ezcsl_send_printf("\r\n");
+    ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
+    ezhdl.buf[ezhdl.prefix_len] = 0;
+    ezhdl.bufl = ezhdl.prefix_len;
+    ezhdl.bufp = ezhdl.prefix_len;
 }

@@ -5,7 +5,7 @@ extern void ezport_receive_a_char(char c);
 
 int main(void)
 {
-    ezcsl_init("test");
+    ezcsl_init("test: ");
     char c;
     do {
         c = getch();

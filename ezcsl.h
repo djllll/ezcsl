@@ -3,6 +3,6 @@
 
 
 
-extern void ezcsl_init(const char *appname);
+extern void ezcsl_init(const char *prefix);
 
 #endif
