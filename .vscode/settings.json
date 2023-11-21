@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "ezcsl.h": "c",
+        "stdint.h": "c",
+        "conio.h": "c",
+        "stdio.h": "c"
+    }
+}
