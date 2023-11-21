@@ -3,6 +3,8 @@
         "ezcsl.h": "c",
         "stdint.h": "c",
         "conio.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdarg.h": "c",
+        "typeinfo": "c"
     }
 }
