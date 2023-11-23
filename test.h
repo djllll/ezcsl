@@ -2,7 +2,8 @@
 #define _TEST_H_
 #include "ezcsl.h"
 
-extern void CslTest_Add2(EzParamType *para);
-extern void CslTest_Add3(EzParamType *para);
+
+extern void eztest_cmd_init(void);
+extern void eztest_cmd_callback(uint16_t id, ez_param_t *para);
 
 #endif

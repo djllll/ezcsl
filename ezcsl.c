@@ -7,7 +7,7 @@
 /* your include end */
 
 
-#define PRINT_BUF_LEN   30
+#define PRINT_BUF_LEN   60
 #define PARA_LEN_MAX 5
 #define STR_TO_PARA atoi
 
@@ -34,11 +34,11 @@ static void ezcsl_submit(void);
 
 static Ez_Cmd_t cmd_head;
 static Ez_CmdUnit_t cmd_unit_head;
-Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe);
-uint16_t ezcsl_cmd_register(Ez_CmdUnit_t *unit,const char *title_sub,const char *describe,uint8_t para_num, void (*callback)(EzParamType *));
+Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(uint16_t,ez_param_t *));
+ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit,uint16_t id,const char *title_sub,const char *describe,uint8_t para_num);
 
 /* ez inner cmd */
-static void walk_all_cmd_unit(EzParamType *para);
+static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para);
 
 #define EZCSL_RST()                                   \
     do {                                              \
@@ -147,8 +147,8 @@ void ezcsl_init(const char *prefix)
     ezhdl.bufp = ezhdl.prefix_len;
     ezhdl.bufl = ezhdl.prefix_len;
 
-    Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help");
-    ezcsl_cmd_register(unit,NULL,NULL,0,walk_all_cmd_unit);
+    Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
+    ezcsl_cmd_register(unit,0,NULL,NULL,0);
     ezcsl_send_printf("you can input '?' for help\r\n");
 
     ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
@@ -170,7 +170,7 @@ void ezcsl_send_printf(const char *fmt, ...)
 static void ezcsl_submit(void)
 {
     uint8_t paranum=0;
-    EzParamType para[PARA_LEN_MAX];
+    ez_param_t para[PARA_LEN_MAX];
     char *cmd=ezhdl.buf+ezhdl.prefix_len;
     const char *subtitle=strNULL;
     const char *maintitle=strNULL;
@@ -192,7 +192,7 @@ static void ezcsl_submit(void)
                 break;
             default:
             if(paranum<PARA_LEN_MAX){
-                para[paranum]=(EzParamType)STR_TO_PARA(a_split);
+                para[paranum]=(ez_param_t)STR_TO_PARA(a_split);
                 paranum++;
             }
                 break;
@@ -217,13 +217,15 @@ static void ezcsl_submit(void)
             if (strcmp(cmd_p->title_sub, subtitle) == 0) {
                 match_ok_flag = 2;
                 if (cmd_p->para_num == paranum) {
-                    cmd_p->callback(para); // user can use `ezcsl_send_printf` in callback
+                    cmd_p->unit->callback(cmd_p->id,para); // user can use `ezcsl_send_printf` in callback
                 } else {
-                    ezcsl_send_printf("\033[31mFormat Error:\033[m %s,%s,<...>,<...>,<N=%d>\r\n", maintitle, subtitle, cmd_p->para_num);
+                    ezcsl_send_printf("\033[31mFormat Error:\033[m %s,%s,<...>,<N=%d>\r\n", maintitle, subtitle, cmd_p->para_num);
                 }
+                break;
             }
         }
     }
+
     switch (match_ok_flag)
     {
     case 0:
@@ -231,7 +233,7 @@ static void ezcsl_submit(void)
         break;
     case 1:
         cmd_p = &cmd_head;
-        ezcsl_send_printf("\033[32mCommand List:\033[m \r\n");
+        ezcsl_send_printf("\033[32mSub Command & Description List\033[m \r\n");
         ezcsl_send_printf("\033[32m=========================\033[m \r\n");
         while (cmd_p->next != NULL) {
             cmd_p = cmd_p->next;
@@ -259,11 +261,11 @@ static void ezcsl_tabfix(void)
 
 /**
  * create a cmd unit
- * @param title_main main title ,cannot null ,length < 10
+ * @param title_main main title ,cannot null or '' ,length < 10
  * @author Jinlin Deng
  */
-Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe){
-    if (title_main==NULL || strlen(title_main)>=10){
+Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(uint16_t,ez_param_t *)){
+    if (strlen(title_main)==0 || strlen(title_main)>=10 || callback==NULL){
         return NULL;
     }
     
@@ -280,6 +282,7 @@ Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe)
         p_add->describe=CHECK_NULL_STR(describe);
         p_add->next = NULL;
         p_add->title_main = title_main;
+        p_add->callback=callback;
         while (p->next != NULL) {
             p = p->next;
         }
@@ -294,41 +297,39 @@ Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe)
  * @author Jinlin Deng
  * @return id begin from 1, if register failed, return 0
  */
-uint16_t ezcsl_cmd_register(Ez_CmdUnit_t *unit,const char *title_sub,const char *describe,uint8_t para_num, void (*callback)(EzParamType *)){
-    static uint16_t id=0;
-        if(para_num>PARA_LEN_MAX){
-            return 0;
+ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, uint16_t id, const char *title_sub, const char *describe, uint8_t para_num)
+{
+    if (para_num > PARA_LEN_MAX) {
+        return EZ_ERR;
+    }
+    Ez_Cmd_t *p = &cmd_head;
+    while (p->next != NULL) { // duplicate
+        p = p->next;
+        if (strcmp(p->unit->title_main, unit->title_main) == 0 && (strcmp(p->title_sub, title_sub) == 0 || p->id == id)) {
+            return EZ_ERR;
         }
-        Ez_Cmd_t *p = &cmd_head;
-        while (p->next != NULL) {   //duplicate
-            p = p->next;
-            if(strcmp(p->title_sub,title_sub)==0){
-                return 0;
-            }
-        }
-        p = &cmd_head;
-        Ez_Cmd_t *p_add = (Ez_Cmd_t *)malloc(sizeof(Ez_Cmd_t));
-        p_add->describe=CHECK_NULL_STR(describe);
-        p_add->next = NULL;
-        p_add->title_sub = CHECK_NULL_STR(title_sub);
-        p_add->callback=callback;
-        p_add->para_num=para_num;
-        p_add->unit=unit;
-        while (p->next != NULL) {
-            p = p->next;
-        }
-        p->next = p_add;
-        id++;
-        p_add->id=id;
-        return id;
+    }
+    p = &cmd_head;
+    Ez_Cmd_t *p_add = (Ez_Cmd_t *)malloc(sizeof(Ez_Cmd_t));
+    p_add->describe = CHECK_NULL_STR(describe);
+    p_add->next = NULL;
+    p_add->title_sub = CHECK_NULL_STR(title_sub);
+    p_add->para_num = para_num;
+    p_add->unit = unit;
+    p_add->id = id;
+    while (p->next != NULL) {
+        p = p->next;
+    }
+    p->next = p_add;
+    return EZ_OK;
 }
 
 
-static void walk_all_cmd_unit(EzParamType *para)
+static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para)
 {
     Ez_CmdUnit_t *p;
     p = &cmd_unit_head;
-    ezcsl_send_printf("\033[32mCommand & Describe List\033[m \r\n");
+    ezcsl_send_printf("\033[32mMain Command & Description List\033[m \r\n");
     ezcsl_send_printf("\033[32m=========================\033[m \r\n");
     while (p->next != NULL) {
         p = p->next;

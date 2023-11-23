@@ -6,12 +6,12 @@
 
 extern void ezport_receive_a_char(char c);
 
+
+
 int main(void)
 {
     ezcsl_init("TEST: ");
-    Ez_CmdUnit_t *testunit= ezcsl_cmd_unit_create("test","add test callback");
-    ezcsl_cmd_register(testunit,"add2","add,a,b",2,CslTest_Add2);
-    ezcsl_cmd_register(testunit,"add3","add,a,b,c",3,CslTest_Add3);
+    eztest_cmd_init();
     char c;
     do {
         c = getch();
