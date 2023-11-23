@@ -15,22 +15,31 @@
 
 const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
+typedef struct CmdHistory{
+    char history[CSL_BUF_LEN];
+    struct CmdHistory *next;
+}cmd_history_t;
+
 
 static struct EzCslHandleStruct {
     uint8_t prefix_len;
     char buf[CSL_BUF_LEN];
     uint16_t bufp;
     uint16_t bufl;
-    char history[HISTORY_LEN][CSL_BUF_LEN];
+    uint8_t historyp;
 } ezhdl;
 
 /* ez console port ,user need to achieve this himself */
 void ezport_receive_a_char(char c);
 void ezport_send_str(char *str, uint16_t len);
 
-void ezcsl_init(const char *prefix);
+void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_send_printf(const char *fmt, ...);
 static void ezcsl_submit(void);
+
+static cmd_history_t *history_head=NULL;
+static void history_add(char *buf);
+static void history_load(uint8_t idx);
 
 static Ez_Cmd_t cmd_head;
 static Ez_CmdUnit_t cmd_unit_head;
@@ -105,6 +114,13 @@ void ezport_receive_a_char(char c)
                 ezhdl.bufp++;
             }
         }
+        else if (c == 0x48) {
+            /* up arrow */
+            EZCSL_RST();
+        }else if (c == 0x50) {
+            /* down arrow */
+            EZCSL_RST();
+        }
         direction_flag = 0;
     }
     // DBGprintf("input :(%x)",c);
@@ -132,25 +148,21 @@ void ezport_send_str(char *str, uint16_t len)
  * @param
  * @author Jinlin Deng
  */
-void ezcsl_init(const char *prefix)
+void ezcsl_init(const char *prefix,const char *welcome)
 {
     ezhdl.prefix_len = strlen(prefix);
     uint16_t i, j;
     for (i = 0; i < CSL_BUF_LEN; i++) {
         ezhdl.buf[i] = i < ezhdl.prefix_len ? prefix[i] : 0;
     }
-    for (j = 0; j < HISTORY_LEN; j++) {
-        for (i = 0; i < CSL_BUF_LEN; i++) {
-            ezhdl.history[j][i] = 0;
-        }
-    }
+
     ezhdl.bufp = ezhdl.prefix_len;
     ezhdl.bufl = ezhdl.prefix_len;
-
+    ezhdl.historyp = 0;
     Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,0);
+    ezport_send_str((char*)welcome,strlen(welcome));
     ezcsl_send_printf("you can input '?' for help\r\n");
-
     ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
 }
 
@@ -293,9 +305,11 @@ Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe 
 
 /**
  * create a cmd unit
- * @param title_sub sub title ,can set null ,length < 10
+ * @param title_sub sub title ,can set null 
+ * @param describe describe your cmd
+ * @param param_num the number of parameters your cmd need
  * @author Jinlin Deng
- * @return id begin from 1, if register failed, return 0
+ * @return register result
  */
 ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, uint16_t id, const char *title_sub, const char *describe, uint8_t para_num)
 {
