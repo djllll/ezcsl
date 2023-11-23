@@ -6,7 +6,7 @@
 
 #define ez_param_t int16_t
 #define CSL_BUF_LEN     30  //console buf len (include prefix)
-#define HISTORY_LEN     3  //history record
+#define HISTORY_LEN     20  //history record
 
 typedef enum{
     EZ_OK=0,

@@ -38,8 +38,11 @@ void ezcsl_send_printf(const char *fmt, ...);
 static void ezcsl_submit(void);
 
 static cmd_history_t *history_head=NULL;
-static void history_add(char *buf);
-static void history_load(uint8_t idx);
+static cmd_history_t *cur_history=NULL;
+static void buf_to_history(void);
+static void load_history(void);
+static void last_history_to_buf(void);
+static void next_history_to_buf(void);
 
 static Ez_Cmd_t *cmd_head=NULL;
 static Ez_CmdUnit_t *cmd_unit_head=NULL;
@@ -116,10 +119,10 @@ void ezport_receive_a_char(char c)
         }
         else if (c == 0x48) {
             /* up arrow */
-            EZCSL_RST();
+            last_history_to_buf();
         }else if (c == 0x50) {
             /* down arrow */
-            EZCSL_RST();
+            next_history_to_buf();
         }
         direction_flag = 0;
     }
@@ -189,6 +192,9 @@ static void ezcsl_submit(void)
     
     char *a_split;
     uint8_t split_cnt=0;
+
+    buf_to_history();
+    cur_history=NULL;
 
     ezhdl.buf[ezhdl.bufl]=','; // add a ',' to the end for strtok 
     ezhdl.buf[ezhdl.bufl+1]=0; // add a ',' to the end for strtok 
@@ -361,4 +367,77 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para)
         p = p->next;
     }
     ezcsl_send_printf("\033[32m=========================\033[m \r\n");
+}
+
+
+static void buf_to_history(void)
+{
+    static uint8_t cur_history_len = 0;
+    if (HISTORY_LEN <= 0) {
+        return;
+    }
+    if (history_head == NULL) {
+        cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
+        strcpy(p_add->history, ezhdl.buf);
+        p_add->next=NULL;
+        history_head = p_add;
+        cur_history_len++;
+    } else {
+        if (cur_history_len < HISTORY_LEN) { // first insert
+            cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
+            strcpy(p_add->history, ezhdl.buf);
+            p_add->next = history_head;
+            history_head = p_add;
+            cur_history_len++;
+        } else { // move last to first
+            cmd_history_t *p_last = history_head;
+            cmd_history_t *p_last_parent = history_head;
+            while (p_last != NULL) {
+                if (p_last->next == NULL) {
+                    break;
+                }
+                p_last_parent = p_last;
+                p_last = p_last->next;
+            }
+            p_last_parent->next = NULL;
+            strcpy(p_last->history, ezhdl.buf);
+            p_last->next = history_head;
+            history_head = p_last;
+        }
+    }
+}
+
+
+static void load_history(void){
+    strcpy(ezhdl.buf,cur_history->history);
+    ezhdl.bufl=ezhdl.bufp=strlen(ezhdl.buf);
+    ezcsl_send_printf("\033[0G%s\033[K",ezhdl.buf);
+}
+static void last_history_to_buf(void){
+    if(cur_history==NULL){
+        if(history_head!=NULL){
+            cur_history=history_head;
+            load_history();
+        }
+    }else{
+        if(cur_history->next!=NULL){
+            cur_history=cur_history->next;
+            load_history();
+        }
+    }
+}
+static void next_history_to_buf(void){
+    if(cur_history==NULL){
+        return;
+    }else{
+        cmd_history_t *p=history_head;
+        while(p!=NULL){
+            if(p->next==cur_history){
+                cur_history=p;
+                load_history();
+                break;
+            }
+            p=p->next;
+        }
+    }
 }
