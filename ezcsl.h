@@ -4,10 +4,11 @@
 #include "stdint.h"
 #include "stdarg.h"
 
-#define CSL_BUF_LEN     30  //console buf len (include prefix)
+#define CSL_BUF_LEN     40  //console buf len (include prefix)
 #define HISTORY_LEN     3  //history record
 #define PRINT_BUF_LEN   60
 #define PARA_LEN_MAX    5
+#define SPLIT_CHAR      ","  // length must = 1
 #define ez_param_t      int16_t
 
 typedef enum{

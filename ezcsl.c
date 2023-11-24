@@ -11,10 +11,12 @@
 
 #define STR_TO_PARA atoi
 
+
 #define DBGprintf printf
 
 const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
+
 typedef struct CmdHistory{
     char history[CSL_BUF_LEN];
     struct CmdHistory *next;
@@ -38,6 +40,7 @@ void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_send_printf(const char *fmt, ...);
 void ezcsl_tick(void);
 
+static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
 static cmd_history_t *history_head=NULL;
 static cmd_history_t *cur_history=NULL;
@@ -148,7 +151,11 @@ void ezcsl_tick(void)
                 /* ctrl+c */
                 ezcsl_send_printf("^C\r\n");
                 EZCSL_RST();
-            } else if (c == 0) {
+            } else if (c == 0x09) {
+                /* tab */
+                ezhdl.buf[ezhdl.bufp] = 0; // cmd end
+                ezcsl_tabcomplete();
+            }else if (c == 0) {
                 direction_flag = 1;
             }
         } else {
@@ -173,6 +180,7 @@ void ezcsl_tick(void)
             }
             direction_flag = 0;
         }
+        // DBGprintf("your input is %x\r\n",c);
     }
 }
 
@@ -202,10 +210,10 @@ static void ezcsl_submit(void)
     buf_to_history();
     cur_history=NULL;
 
-    ezhdl.buf[ezhdl.bufl]=','; // add a ',' to the end for strtok 
-    ezhdl.buf[ezhdl.bufl+1]=0; // add a ',' to the end for strtok 
+    ezhdl.buf[ezhdl.bufl]=SPLIT_CHAR[0]; // add a SPLIT_CHR to the end for strtok 
+    ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for strtok 
     while (1) {
-        a_split = strtok((char *)cmd, ",");
+        a_split = strtok((char *)cmd, SPLIT_CHAR);
         if (a_split != NULL) {
             switch (split_cnt) {
             case 0:
@@ -274,11 +282,69 @@ static void ezcsl_submit(void)
     EZCSL_RST();
 }
 
-static void ezcsl_tabfix(void)
+static void ezcsl_tabcomplete(void)
 {
-    // ezcsl_send_printf("\r\n");
-
-    // ezcsl_send_printf("\r\n");
+    char existed_cmdbuf[CSL_BUF_LEN] = {0};
+    uint8_t match_ok_cnt = 0;
+    if(strlen(ezhdl.buf + ezhdl.prefix_len)==0){
+        return;
+    }
+    Ez_Cmd_t *p;
+    p = cmd_head;
+    while (p != NULL) {
+        existed_cmdbuf[0] = 0;
+        strcat(existed_cmdbuf, p->unit->title_main);
+        strcat(existed_cmdbuf, SPLIT_CHAR);
+        strcat(existed_cmdbuf, p->title_sub);
+        if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
+            match_ok_cnt++;
+        }
+        p = p->next;
+    }
+    if (match_ok_cnt == 1) {
+        p = cmd_head;
+        while (p != NULL) {
+            existed_cmdbuf[0] = 0;
+            strcat(existed_cmdbuf, p->unit->title_main);
+            strcat(existed_cmdbuf, SPLIT_CHAR);
+            strcat(existed_cmdbuf, p->title_sub);
+            if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
+                strcpy(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf);
+                ezhdl.bufp = ezhdl.bufl = strlen(ezhdl.buf);
+                ezcsl_send_printf("\033[0G%s\033[K", ezhdl.buf);
+                break;
+            }
+            p = p->next;
+        }
+    } else if (match_ok_cnt > 1) {
+        char autocomplete[CSL_BUF_LEN]={0};
+        ezcsl_send_printf("\r\n");
+        p = cmd_head;
+        while (p != NULL) {
+            existed_cmdbuf[0] = 0;
+            strcat(existed_cmdbuf, p->unit->title_main);
+            strcat(existed_cmdbuf, SPLIT_CHAR);
+            strcat(existed_cmdbuf, p->title_sub);
+            if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
+                ezcsl_send_printf("%s\t", existed_cmdbuf);
+                if (autocomplete[0] == 0) {
+                    strcpy(autocomplete,existed_cmdbuf);
+                }else{
+                    for(uint16_t i=0;i<strlen(autocomplete);i++){
+                        if(autocomplete[i]!=existed_cmdbuf[i]){
+                            autocomplete[i]=0;
+                            break;
+                        }
+                    }
+                }
+            }
+            p = p->next;
+        }
+        strcpy(ezhdl.buf+ezhdl.prefix_len,autocomplete);
+        ezhdl.bufp=ezhdl.bufl=strlen(ezhdl.buf);
+        ezcsl_send_printf("\r\n");
+        ezport_send_str(ezhdl.buf, ezhdl.bufl);
+    }
 }
 
 
@@ -375,7 +441,11 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para)
     ezcsl_send_printf("\033[32m=========================\033[m \r\n");
 }
 
-
+/**
+ * 当前缓冲区内容加入历史记录
+ * @param  
+ * @author Jinlin Deng
+ */
 static void buf_to_history(void)
 {
     static uint8_t cur_history_len = 0;
