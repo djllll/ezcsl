@@ -1,14 +1,14 @@
 #include "ezcsl.h"
 #include "string.h"
 #include "stdlib.h"
+#include "ringbuffer.h"
 
 /* your include begin */
 #include "stdio.h"
 /* your include end */
 
 
-#define PRINT_BUF_LEN   60
-#define PARA_LEN_MAX 5
+
 #define STR_TO_PARA atoi
 
 #define DBGprintf printf
@@ -27,16 +27,18 @@ static struct EzCslHandleStruct {
     uint16_t bufp;
     uint16_t bufl;
     uint8_t historyp;
+    ring_buffer_t *rb;
 } ezhdl;
 
-/* ez console port ,user need to achieve this himself */
+/* ez console port function */
 void ezport_receive_a_char(char c);
-void ezport_send_str(char *str, uint16_t len);
+static void ezport_send_str(char *str, uint16_t len);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_send_printf(const char *fmt, ...);
-static void ezcsl_submit(void);
+void ezcsl_tick(void);
 
+static void ezcsl_submit(void);
 static cmd_history_t *history_head=NULL;
 static cmd_history_t *cur_history=NULL;
 static void buf_to_history(void);
@@ -61,71 +63,12 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para);
     } while (0)
 
 /**
- * use this function by `extern void ezport_receive_a_char(char c)`
- * place it in a loop
  * @param  c the char from input
  * @author Jinlin Deng
  */
 void ezport_receive_a_char(char c)
 {
-    static uint8_t direction_flag = 0; // direction keys
-    if (!direction_flag) {
-        if (c >= 0x20 && c <= 0x7e && ezhdl.bufl < CSL_BUF_LEN) {
-            /* visible char */
-            for (uint16_t i = ezhdl.bufl; i >= ezhdl.bufp + 1; i--) {
-                ezhdl.buf[i] = ezhdl.buf[i - 1];
-            }
-            ezhdl.buf[ezhdl.bufp] = c;
-            ezcsl_send_printf("\033[s");
-
-            ezport_send_str(ezhdl.buf + ezhdl.bufp, ezhdl.bufl - ezhdl.bufp + 1);
-            ezcsl_send_printf("\033[u\033[1C");
-            ezhdl.bufp++;
-            ezhdl.bufl++;
-        } else if (c == 0x08 && ezhdl.bufp > ezhdl.prefix_len) { // cannot delete the prefix
-            /* backspace */
-            ezcsl_send_printf("\033[1D\033[s");
-            for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
-                ezhdl.buf[i] = ezhdl.buf[i + 1];
-                ezport_send_str(ezhdl.buf + i, 1);
-            }
-            ezhdl.bufp--;
-            ezhdl.bufl--;
-            ezcsl_send_printf("\033[K\033[u");
-        } else if (c == 0x0d) {
-            /* enter */
-            ezhdl.buf[ezhdl.bufp] = 0; // cmd end
-            ezcsl_submit();
-        }  else if (c == 0x03) {
-            /* ctrl+c */
-            ezcsl_send_printf("^C\r\n");
-            EZCSL_RST();
-        } else if (c == 0) {
-            direction_flag = 1;
-        }
-    } else {
-        if (c == 0x4b) {
-            /* left arrow */
-            if (ezhdl.bufp > ezhdl.prefix_len) {
-                ezcsl_send_printf("\033[1D");
-                ezhdl.bufp--;
-            }
-        } else if (c == 0x4d) {
-            /* right arrow */
-            if (ezhdl.bufp < ezhdl.bufl) {
-                ezcsl_send_printf("\033[1C");
-                ezhdl.bufp++;
-            }
-        }
-        else if (c == 0x48) {
-            /* up arrow */
-            last_history_to_buf();
-        }else if (c == 0x50) {
-            /* down arrow */
-            next_history_to_buf();
-        }
-        direction_flag = 0;
-    }
+    RingBufferPush(ezhdl.rb,(uint8_t)c);
     // DBGprintf("input :(%x)",c);
 }
 
@@ -135,7 +78,7 @@ void ezport_receive_a_char(char c)
  * @param len the length of the str
  * @author Jinlin Deng
  */
-void ezport_send_str(char *str, uint16_t len)
+static void ezport_send_str(char *str, uint16_t len)
 {
     /**
      * Write your code here
@@ -162,13 +105,76 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezhdl.bufp = ezhdl.prefix_len;
     ezhdl.bufl = ezhdl.prefix_len;
     ezhdl.historyp = 0;
+    ezhdl.rb = RingBufferCreate();
     Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,0);
     ezport_send_str((char*)welcome,strlen(welcome));
     ezcsl_send_printf("you can input '?' for help\r\n");
     ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
 }
+void ezcsl_tick(void)
+{
+    static uint8_t direction_flag = 0; // direction keys
+    uint8_t c;
+    while (RingBufferPop(ezhdl.rb, &c) == RB_OK) {
+        if (!direction_flag) {
+            if (c >= 0x20 && c <= 0x7e && ezhdl.bufl < CSL_BUF_LEN) {
+                /* visible char */
+                for (uint16_t i = ezhdl.bufl; i >= ezhdl.bufp + 1; i--) {
+                    ezhdl.buf[i] = ezhdl.buf[i - 1];
+                }
+                ezhdl.buf[ezhdl.bufp] = c;
+                ezcsl_send_printf("\033[s");
 
+                ezport_send_str(ezhdl.buf + ezhdl.bufp, ezhdl.bufl - ezhdl.bufp + 1);
+                ezcsl_send_printf("\033[u\033[1C");
+                ezhdl.bufp++;
+                ezhdl.bufl++;
+            } else if (c == 0x08 && ezhdl.bufp > ezhdl.prefix_len) { // cannot delete the prefix
+                /* backspace */
+                ezcsl_send_printf("\033[1D\033[s");
+                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
+                    ezhdl.buf[i] = ezhdl.buf[i + 1];
+                    ezport_send_str(ezhdl.buf + i, 1);
+                }
+                ezhdl.bufp--;
+                ezhdl.bufl--;
+                ezcsl_send_printf("\033[K\033[u");
+            } else if (c == 0x0d) {
+                /* enter */
+                ezhdl.buf[ezhdl.bufp] = 0; // cmd end
+                ezcsl_submit();
+            } else if (c == 0x03) {
+                /* ctrl+c */
+                ezcsl_send_printf("^C\r\n");
+                EZCSL_RST();
+            } else if (c == 0) {
+                direction_flag = 1;
+            }
+        } else {
+            if (c == 0x4b) {
+                /* left arrow */
+                if (ezhdl.bufp > ezhdl.prefix_len) {
+                    ezcsl_send_printf("\033[1D");
+                    ezhdl.bufp--;
+                }
+            } else if (c == 0x4d) {
+                /* right arrow */
+                if (ezhdl.bufp < ezhdl.bufl) {
+                    ezcsl_send_printf("\033[1C");
+                    ezhdl.bufp++;
+                }
+            } else if (c == 0x48) {
+                /* up arrow */
+                last_history_to_buf();
+            } else if (c == 0x50) {
+                /* down arrow */
+                next_history_to_buf();
+            }
+            direction_flag = 0;
+        }
+    }
+}
 
 void ezcsl_send_printf(const char *fmt, ...)
 {

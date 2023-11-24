@@ -21,6 +21,7 @@ int main(void)
     do {
         c = getch();
         ezport_receive_a_char(c);
+        ezcsl_tick();
     } while (c!=0x1b); //esc
     return 0;
 }
