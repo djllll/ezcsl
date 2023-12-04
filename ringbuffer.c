@@ -15,7 +15,7 @@ ring_buffer_t * RingBufferCreate(void)
 }
 
 // 向环形缓冲区写入数据  
-rb_sta_t RingBufferPush(ring_buffer_t *cb, uint8_t data) {  
+rb_sta_t RingBufferPush(ring_buffer_t *cb, RB_DATA_T data) {  
     // 判断缓冲区是否已满  
     if (MOD_BUFLEN(cb->tail + 1) == cb->head) {  
         return RB_FULL;  
@@ -27,7 +27,7 @@ rb_sta_t RingBufferPush(ring_buffer_t *cb, uint8_t data) {
 }  
   
 // 从环形缓冲区读取数据  
-rb_sta_t RingBufferPop(ring_buffer_t *cb,uint8_t *rev) {  
+rb_sta_t RingBufferPop(ring_buffer_t *cb,RB_DATA_T *rev) {  
     // 判断缓冲区是否为空  
     if (cb->head == cb->tail) {  
         return RB_EMPTY;  
