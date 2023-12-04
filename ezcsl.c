@@ -442,7 +442,7 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para)
 }
 
 /**
- * 当前缓冲区内容加入历史记录
+ * move the buf to history
  * @param  
  * @author Jinlin Deng
  */
@@ -483,7 +483,10 @@ static void buf_to_history(void)
     }
 }
 
-
+/**
+ * move history to buf  
+ * @author Jinlin Deng
+ */
 static void load_history(void){
     strcpy(ezhdl.buf,cur_history->history);
     ezhdl.bufl=ezhdl.bufp=strlen(ezhdl.buf);
