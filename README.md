@@ -22,3 +22,8 @@
 |PRINT_BUF_LEN   |终端每次输出缓冲区大小|
 |PARA_LEN_MAX    |命令支持的最大参数数量|
 |ez_param_t      |参数变量的类型|
+
+
+# Example 
+在PC上模拟终端，在根目录使用`gcc *.c -o example`即可编译
+运行example进入终端模拟，按Esc退出
