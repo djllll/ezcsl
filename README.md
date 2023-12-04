@@ -2,7 +2,7 @@
 > C语言控制台模拟程序，可以用于MCU与上位机的交互
 
 ## 代码移植
-1. 将`ezcsl.c/h,ringbuffer.c/h`四个文件放入工程中
+1. 将`ezcsl.c/h,ezrb.c/h`四个文件放入工程中
 2. 将`ezport_receive_a_char`函数放入串口接收函数（或其他终端输入函数）中，参数`char c`为接收到的字符
 3. 在函数`ezport_send_str`中，写入自己的串口发送函数
 4. 移植完成

@@ -1,5 +1,5 @@
-#ifndef _RINGBUFFER_H_
-#define _RINGBUFFER_H_
+#ifndef _EZRB_H_
+#define _EZRB_H_
 
 #include "stdint.h"
 
@@ -17,10 +17,10 @@ typedef struct {
     RB_DATA_T buffer[RB_BUF_LEN];  
     int head;    
     int tail;    
-} ring_buffer_t;  
+} ezrb_t;  
 
-extern ring_buffer_t *RingBufferCreate(void);
-extern rb_sta_t RingBufferPush(ring_buffer_t *buffer,RB_DATA_T dat);
-extern rb_sta_t RingBufferPop(ring_buffer_t *buffer,RB_DATA_T *dat);
+extern ezrb_t *ezrb_create(void);
+extern rb_sta_t ezrb_push(ezrb_t *buffer,RB_DATA_T dat);
+extern rb_sta_t ezrb_pop(ezrb_t *buffer,RB_DATA_T *dat);
 
 #endif

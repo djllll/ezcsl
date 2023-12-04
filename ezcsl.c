@@ -1,7 +1,7 @@
 #include "ezcsl.h"
 #include "string.h"
 #include "stdlib.h"
-#include "ringbuffer.h"
+#include "ezrb.h"
 
 /* your include begin */
 #include "stdio.h"
@@ -29,7 +29,7 @@ static struct EzCslHandleStruct {
     uint16_t bufp;
     uint16_t bufl;
     uint8_t historyp;
-    ring_buffer_t *rb;
+    ezrb_t *rb;
 } ezhdl;
 
 /* ez console port function */
@@ -71,7 +71,7 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t *para);
  */
 void ezport_receive_a_char(char c)
 {
-    RingBufferPush(ezhdl.rb,(uint8_t)c);
+    ezrb_push(ezhdl.rb,(uint8_t)c);
     // DBGprintf("input :(%x)",c);
 }
 
@@ -108,7 +108,7 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezhdl.bufp = ezhdl.prefix_len;
     ezhdl.bufl = ezhdl.prefix_len;
     ezhdl.historyp = 0;
-    ezhdl.rb = RingBufferCreate();
+    ezhdl.rb = ezrb_create();
     Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,0);
     ezport_send_str((char*)welcome,strlen(welcome));
@@ -119,7 +119,7 @@ void ezcsl_tick(void)
 {
     static uint8_t direction_flag = 0; // direction keys
     uint8_t c;
-    while (RingBufferPop(ezhdl.rb, &c) == RB_OK) {
+    while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
         if (!direction_flag) {
             if (c >= 0x20 && c <= 0x7e && ezhdl.bufl < CSL_BUF_LEN) {
                 /* visible char */

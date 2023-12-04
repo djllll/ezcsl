@@ -1,11 +1,14 @@
-#include "ringbuffer.h"
+#include "ezrb.h"
 #include "malloc.h"
 
   
-// 初始化环形缓冲区
-ring_buffer_t * RingBufferCreate(void)
+/**
+ * create a ringbuffer
+ * @author Jinlin Deng
+ */
+ezrb_t * ezrb_create(void)
 {
-    ring_buffer_t *buffer = (ring_buffer_t *)malloc(sizeof(ring_buffer_t));
+    ezrb_t *buffer = (ezrb_t *)malloc(sizeof(ezrb_t));
     buffer->head = 0;
     buffer->tail = 0;
     for (uint8_t i = 0; i < RB_BUF_LEN; i++) {
@@ -14,25 +17,33 @@ ring_buffer_t * RingBufferCreate(void)
     return buffer;
 }
 
-// 向环形缓冲区写入数据  
-rb_sta_t RingBufferPush(ring_buffer_t *cb, RB_DATA_T data) {  
-    // 判断缓冲区是否已满  
+/**
+ * push the data to buffer
+ * @param  data :the data
+ * @author Jinlin Deng
+ */  
+rb_sta_t ezrb_push(ezrb_t *cb, RB_DATA_T data) {  
+    // buffer is full?  
     if (MOD_BUFLEN(cb->tail + 1) == cb->head) {  
         return RB_FULL;  
     }  
-    // 将数据写入缓冲区  
+    // write  
     cb->buffer[cb->tail] = data;  
     cb->tail = MOD_BUFLEN(cb->tail + 1); 
 	return RB_OK; 
 }  
   
-// 从环形缓冲区读取数据  
-rb_sta_t RingBufferPop(ring_buffer_t *cb,RB_DATA_T *rev) {  
-    // 判断缓冲区是否为空  
+/**
+ * get the data from buffer
+ * @param  rev :the data received
+ * @author Jinlin Deng
+ */  
+rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *rev) {  
+    // buffer is empty ?
     if (cb->head == cb->tail) {  
         return RB_EMPTY;  
     }  
-    // 读取数据并返回  
+    // read  
     uint8_t data = cb->buffer[cb->head];  
     cb->head = MOD_BUFLEN(cb->head + 1);  
 	*rev=data;
