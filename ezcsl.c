@@ -249,7 +249,7 @@ static void ezcsl_submit(void)
                 if (cmd_p->para_num == paranum) {
                     cmd_p->unit->callback(cmd_p->id,para); // user can use `ezcsl_send_printf` in callback
                 } else {
-                    ezcsl_send_printf("\033[31mFormat Error:\033[m %s,%s,<...>,<N=%d>\r\n", maintitle, subtitle, cmd_p->para_num);
+                    ezcsl_send_printf("\033[31mCmd Error!\033[m %s,%s,<...>,<N=%d> : %s\r\n", maintitle, subtitle, cmd_p->para_num,cmd_p->describe);
                 }
                 break;
             }
