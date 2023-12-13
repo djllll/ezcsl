@@ -9,11 +9,11 @@
 #define PRINT_BUF_LEN   60
 #define PARA_LEN_MAX    5
 #define SPLIT_CHAR      ","  // length must = 1
-#define ez_param_t      void*
 
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
 #define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
 #define EZ_PtoF(param) (*(float*)(param))       //ez_param_t => float
+#define ez_param_t      void*
 
 typedef enum{
     EZ_OK=0,
