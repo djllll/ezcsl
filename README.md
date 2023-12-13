@@ -21,7 +21,7 @@
 |HISTORY_LEN     |最大历史记录存储条数|        
 |PRINT_BUF_LEN   |终端每次输出缓冲区大小|
 |PARA_LEN_MAX    |命令支持的最大参数数量|
-|ez_param_t      |参数变量的类型|
+
 
 
 # Example 
