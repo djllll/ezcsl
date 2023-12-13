@@ -11,6 +11,10 @@
 #define SPLIT_CHAR      ","  // length must = 1
 #define ez_param_t      void*
 
+#define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
+#define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
+#define EZ_PtoF(param) (*(float*)(param))       //ez_param_t => float
+
 typedef enum{
     EZ_OK=0,
     EZ_ERR

@@ -1,4 +1,6 @@
 #include "test.h"
+#include "ezcsl.h"
+
 #define TEST_ADD2_ID 0
 #define TEST_ADD3_ID 1
 
@@ -7,13 +9,11 @@
 void eztest_cmd_callback(uint16_t id, ez_param_t* para)
 {
     switch (id) {
-    case TEST_ADD2_ID: {
-        int a = *(int *)para[0];
-        int b = *(int *)para[1];
-        ezcsl_send_printf("%s:result is %d\r\n", __func__, *(int *)para[0] + *(int *)para[1]);
-    } break;
+    case TEST_ADD2_ID: 
+        ezcsl_send_printf("result is %d\r\n",  EZ_PtoI(para[0]) +EZ_PtoI(para[1]));
+        break;
     case TEST_ADD3_ID:
-        ezcsl_send_printf("%s:result is %d\r\n", __func__, *(int*)para[0] + *(int*)para[1] + *(int*)para[2]);
+        ezcsl_send_printf("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
         break;
     default:
         break;
@@ -23,7 +23,7 @@ void eztest_auto_callback(uint16_t id,ez_param_t* para){
     switch (id)
     {
     case TEST_MUL_ID:
-        ezcsl_send_printf("your input s:%s f:%f i:%d\r\n", (const char*)(para[0]) ,*(float *)para[1] , *(int*)para[2]);
+        ezcsl_send_printf("your input s:%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
         break;
     
     default:
