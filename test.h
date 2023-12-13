@@ -4,6 +4,6 @@
 
 
 extern void eztest_cmd_init(void);
-extern void eztest_cmd_callback(uint16_t id, ez_param_t *para);
+extern void eztest_cmd_callback(uint16_t id, ez_param_t* para);
 
 #endif
