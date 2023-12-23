@@ -153,7 +153,7 @@ void ezcsl_tick(void)
                 /* tab */
                 ezhdl.buf[ezhdl.bufp] = 0; // cmd end
                 ezcsl_tabcomplete();
-            }else if (c == 0) {
+            }else if (c == 0xe0) {
                 direction_flag = 1;
             }
         } else {
