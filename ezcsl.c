@@ -115,10 +115,10 @@ void ezcsl_init(const char *prefix,const char *welcome)
 }
 void ezcsl_tick(void)
 {
-    static uint8_t direction_flag = 0; // direction keys
+    static uint8_t key_two_bytes_flag = 0; // direction keys
     uint8_t c;
     while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
-        if (!direction_flag) {
+        if (!key_two_bytes_flag) {
             if (c >= 0x20 && c <= 0x7e && ezhdl.bufl < CSL_BUF_LEN) {
                 /* visible char */
                 for (uint16_t i = ezhdl.bufl; i >= ezhdl.bufp + 1; i--) {
@@ -153,8 +153,9 @@ void ezcsl_tick(void)
                 /* tab */
                 ezhdl.buf[ezhdl.bufp] = 0; // cmd end
                 ezcsl_tabcomplete();
-            }else if (c == 0xe0) {
-                direction_flag = 1;
+            }else if (c == 0xe0 || c == 0x00) { 
+                //TODO the prefix of some special keys is 0x00,most is 0xe0 
+                key_two_bytes_flag = 1;
             }
         } else {
             if (c == 0x4b) {
@@ -175,8 +176,18 @@ void ezcsl_tick(void)
             } else if (c == 0x50) {
                 /* down arrow */
                 next_history_to_buf();
+            } else if (c == 0x53 && ezhdl.bufp < ezhdl.bufl) {
+                /* delete */
+                ezcsl_send_printf("\033[s");
+                for (uint16_t i = ezhdl.bufp; i < ezhdl.bufl; i++) {
+                    ezhdl.buf[i] = ezhdl.buf[i + 1];
+                    ezport_send_str(ezhdl.buf + i, 1);
+                }
+                ezhdl.bufp;
+                ezhdl.bufl--;
+                ezcsl_send_printf("\033[K\033[u");
             }
-            direction_flag = 0;
+            key_two_bytes_flag = 0;
         }
         // DBGprintf("your input is %x\r\n",c);
     }
