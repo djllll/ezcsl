@@ -38,6 +38,7 @@ typedef struct CmdObj{
 }Ez_Cmd_t;
 
 extern void ezcsl_init(const char *prefix,const char *welcome);
+extern void ezcsl_deinit(void); 
 extern void ezcsl_send_printf(const char *fmt, ...);
 extern void ezcsl_tick(void);
 extern Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(uint16_t,ez_param_t* ));

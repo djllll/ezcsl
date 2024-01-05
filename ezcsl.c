@@ -35,13 +35,14 @@ void ezport_receive_a_char(char c);
 static void ezport_send_str(char *str, uint16_t len);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
+void ezcsl_deinit(void);
 void ezcsl_send_printf(const char *fmt, ...);
 void ezcsl_tick(void);
 
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
 static cmd_history_t *history_head=NULL;
-static cmd_history_t *cur_history=NULL;
+static cmd_history_t *cur_history=NULL; //当前加载的历史记录的指针
 static void buf_to_history(void);
 static void load_history(void);
 static void last_history_to_buf(void);
@@ -113,6 +114,30 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezcsl_send_printf("you can input '?' for help\r\n");
     ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
 }
+
+
+void ezcsl_deinit(void){
+    Ez_Cmd_t *p1=cmd_head;
+    while(p1!=NULL){
+        Ez_Cmd_t *p_del=p1;
+        free(p_del);
+        p1=p1->next;
+    }
+    Ez_CmdUnit_t *p2=cmd_unit_head;
+    while(p2!=NULL){
+        Ez_CmdUnit_t *p_del=p2;
+        free(p_del);
+        p2=p2->next;
+    }
+    cmd_history_t *p3 =history_head;
+    while(p3!=NULL){
+        cmd_history_t *p_del=p3;
+        free(p_del);
+        p3=p3->next;
+    }
+}
+
+
 void ezcsl_tick(void)
 {
     static uint8_t key_two_bytes_flag = 0; // direction keys

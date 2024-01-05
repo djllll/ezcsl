@@ -23,5 +23,6 @@ int main(void)
         ezport_receive_a_char(c);
         ezcsl_tick();
     } while (c!=0x1b); //esc
+    ezcsl_deinit();
     return 0;
 }
