@@ -138,20 +138,20 @@ void ezcsl_deinit(void){
     Ez_Cmd_t *p1=cmd_head;
     while(p1!=NULL){
         Ez_Cmd_t *p_del=p1;
-        free(p_del);
         p1=p1->next;
+        free(p_del);
     }
     Ez_CmdUnit_t *p2=cmd_unit_head;
     while(p2!=NULL){
         Ez_CmdUnit_t *p_del=p2;
-        free(p_del);
         p2=p2->next;
+        free(p_del);
     }
     cmd_history_t *p3 =history_head;
     while(p3!=NULL){
         cmd_history_t *p_del=p3;
-        free(p_del);
         p3=p3->next;
+        free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
 }
