@@ -49,3 +49,11 @@ rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *rev) {
 	*rev=data;
     return RB_OK;  
 }  
+
+void ezrb_destroy(ezrb_t *buffer)
+{
+   if(buffer!=NULL){
+    free(buffer);
+    buffer=NULL;
+   }
+}
