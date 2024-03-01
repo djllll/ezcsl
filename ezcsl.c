@@ -140,6 +140,7 @@ void ezcsl_deinit(void){
         free(p_del);
         p3=p3->next;
     }
+    ezrb_destroy(ezhdl.rb);
 }
 
 
