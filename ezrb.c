@@ -1,7 +1,11 @@
 #include "ezrb.h"
 #include "malloc.h"
 
-  
+ezrb_t *ezrb_create(void);
+rb_sta_t ezrb_push(ezrb_t *buffer,RB_DATA_T dat);
+rb_sta_t ezrb_pop(ezrb_t *buffer,RB_DATA_T *dat);
+void ezrb_destroy(ezrb_t *buffer);
+
 /**
  * create a ringbuffer
  * @author Jinlin Deng
@@ -49,3 +53,11 @@ rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *rev) {
 	*rev=data;
     return RB_OK;  
 }  
+
+void ezrb_destroy(ezrb_t *buffer)
+{
+   if(buffer!=NULL){
+    free(buffer);
+    buffer=NULL;
+   }
+}
