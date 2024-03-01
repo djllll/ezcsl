@@ -1,10 +1,10 @@
 #include "ezcsl.h"
-#include "string.h"
 #include "stdlib.h"
 #include "ezrb.h"
+#include "ezstring.h"
 
 /* your include begin */
-#include "stdio.h"
+
 /* your include end */
 
 #define BACKSPACE_KV 0x08
@@ -37,11 +37,10 @@ static struct EzCslHandleStruct {
 
 /* ez console port function */
 void ezport_receive_a_char(char c);
-static void ezport_send_str(char *str, uint16_t len);
+void ezport_send_str(char *str, uint16_t len);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_deinit(void);
-void ezcsl_send_printf(const char *fmt, ...);
 void ezcsl_tick(void);
 
 static void ezcsl_tabcomplete(void);
@@ -69,6 +68,20 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para);
         ezhdl.bufp = ezhdl.prefix_len;                \
     } while (0)
 
+
+
+// void ezcsl_send_printf(const char *fmt, ...)
+// {
+//     uint16_t printed;
+//     va_list args;
+//     char dat_buf[PRINT_BUF_LEN];
+//     va_start(args, fmt);
+//     printed = vsprintf_s(dat_buf,PRINT_BUF_LEN, fmt, args);
+//     va_end(args);
+//     ezport_send_str(dat_buf, printed);
+// }
+
+
 /**
  * @param  c the char from input
  * @author Jinlin Deng
@@ -85,7 +98,7 @@ void ezport_receive_a_char(char c)
  * @param len the length of the str
  * @author Jinlin Deng
  */
-static void ezport_send_str(char *str, uint16_t len)
+void ezport_send_str(char *str, uint16_t len)
 {
     /**
      * Write your code here
@@ -103,7 +116,7 @@ static void ezport_send_str(char *str, uint16_t len)
  */
 void ezcsl_init(const char *prefix,const char *welcome)
 {
-    ezhdl.prefix_len = strlen(prefix);
+    ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
     uint16_t i, j;
     for (i = 0; i < CSL_BUF_LEN; i++) {
         ezhdl.buf[i] = i < ezhdl.prefix_len ? prefix[i] : 0;
@@ -115,7 +128,7 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezhdl.rb = ezrb_create();
     Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,"");
-    ezport_send_str((char*)welcome,strlen(welcome));
+    ezport_send_str((char*)welcome,estrlen(welcome)); 
     ezcsl_send_printf("you can input '?' for help\r\n");
     ezport_send_str(ezhdl.buf, ezhdl.prefix_len);
 }
@@ -224,16 +237,7 @@ void ezcsl_tick(void)
     }
 }
 
-void ezcsl_send_printf(const char *fmt, ...)
-{
-    uint16_t printed;
-    va_list args;
-    char dat_buf[PRINT_BUF_LEN];
-    va_start(args, fmt);
-    printed = vsprintf_s(dat_buf,PRINT_BUF_LEN, fmt, args);
-    va_end(args);
-    ezport_send_str(dat_buf, printed);
-}
+
 
 
 static void ezcsl_submit(void)
@@ -252,10 +256,10 @@ static void ezcsl_submit(void)
     buf_to_history();
     cur_history=NULL;
 
-    ezhdl.buf[ezhdl.bufl]=SPLIT_CHAR[0]; // add a SPLIT_CHR to the end for strtok 
-    // ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for strtok 
+    ezhdl.buf[ezhdl.bufl]=SPLIT_CHAR; // add a SPLIT_CHR to the end for estrtokc 
+    // ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for estrtokc 
     while (1) {
-        a_split = strtok((char *)cmd, SPLIT_CHAR);
+        a_split = estrtokc((char *)cmd, SPLIT_CHAR);
         if (a_split != NULL) {
             switch (split_cnt) {
             case 0:
@@ -275,7 +279,7 @@ static void ezcsl_submit(void)
             break;
         }
         split_cnt++;
-        cmd=NULL; //for strtok continue
+        cmd=NULL; //for estrtokc continue
     };
     
 
@@ -284,9 +288,9 @@ static void ezcsl_submit(void)
     Ez_Cmd_t *cmd_p = cmd_head;
     uint8_t match_ok_flag=0;  //0 match fail ,1 main match ok ,2 main and sub  match  ok 
     while (cmd_p!= NULL) {
-        if (strcmp(cmd_p->unit->title_main, maintitle) == 0) {
+        if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
             match_ok_flag = 1;
-            if (strcmp(cmd_p->title_sub, subtitle) == 0) {
+            if (estrcmp(cmd_p->title_sub, subtitle) == 0) {
                 match_ok_flag = 2;
                 if (cmd_p->para_num == paranum) {
                     for (uint8_t i = 0; i < paranum; i++) {
@@ -330,7 +334,7 @@ static void ezcsl_submit(void)
         ezcsl_send_printf("\033[32mSub Command & Description List\033[m \r\n");
         ezcsl_send_printf("\033[32m=========================\033[m \r\n");
         while (cmd_p != NULL) {
-            if (strcmp(cmd_p->unit->title_main, maintitle) == 0) {
+            if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
                 ezcsl_send_printf("\033[6m%s,%s:\033[m  %s\r\n", cmd_p->unit->title_main, cmd_p->title_sub, cmd_p->describe);
             }
             cmd_p = cmd_p->next;
@@ -349,17 +353,17 @@ static void ezcsl_tabcomplete(void)
 {
     char existed_cmdbuf[CSL_BUF_LEN] = {0};
     uint8_t match_ok_cnt = 0;
-    if(strlen(ezhdl.buf + ezhdl.prefix_len)==0){
+    if(estrlen_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN)==0){
         return;
     }
     Ez_Cmd_t *p;
     p = cmd_head;
     while (p != NULL) {
         existed_cmdbuf[0] = 0;
-        strcat_s(existed_cmdbuf,CSL_BUF_LEN,p->unit->title_main);
-        strcat_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-        strcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-        if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
+        estrcat_s(existed_cmdbuf,CSL_BUF_LEN,p->unit->title_main);
+        estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
+        estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
+        if (estrncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, estrlen_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN)) == 0) {
             match_ok_cnt++;
         }
         p = p->next;
@@ -368,12 +372,12 @@ static void ezcsl_tabcomplete(void)
         p = cmd_head;
         while (p != NULL) {
             existed_cmdbuf[0] = 0;
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-            if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
-                strcpy_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN-ezhdl.prefix_len, existed_cmdbuf);
-                ezhdl.bufp = ezhdl.bufl = strlen(ezhdl.buf);
+            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
+            estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
+            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
+            if (estrncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, estrlen_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN)) == 0) {
+                estrcpy_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN-ezhdl.prefix_len, existed_cmdbuf);
+                ezhdl.bufp = ezhdl.bufl = estrlen_s(ezhdl.buf,CSL_BUF_LEN);
                 ezcsl_send_printf("\033[0G%s\033[K", ezhdl.buf);
                 break;
             }
@@ -385,15 +389,15 @@ static void ezcsl_tabcomplete(void)
         p = cmd_head;
         while (p != NULL) {
             existed_cmdbuf[0] = 0;
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-            strcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-            if (strncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, strlen(ezhdl.buf + ezhdl.prefix_len)) == 0) {
+            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
+            estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
+            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
+            if (estrncmp(ezhdl.buf + ezhdl.prefix_len, existed_cmdbuf, estrlen_s(ezhdl.buf + ezhdl.prefix_len,CSL_BUF_LEN)) == 0) {
                 ezcsl_send_printf("%s\t", existed_cmdbuf);
                 if (autocomplete[0] == 0) {
-                    strcpy_s(autocomplete,CSL_BUF_LEN,existed_cmdbuf);
+                    estrcpy_s(autocomplete,CSL_BUF_LEN,existed_cmdbuf);
                 }else{
-                    for(uint16_t i=0;i<strlen(autocomplete);i++){
+                    for(uint16_t i=0;i<estrlen_s(autocomplete,CSL_BUF_LEN);i++){
                         if(autocomplete[i]!=existed_cmdbuf[i]){
                             autocomplete[i]=0;
                             break;
@@ -403,8 +407,8 @@ static void ezcsl_tabcomplete(void)
             }
             p = p->next;
         }
-        strcpy_s(ezhdl.buf+ezhdl.prefix_len,CSL_BUF_LEN-ezhdl.prefix_len,autocomplete);
-        ezhdl.bufp=ezhdl.bufl=strlen(ezhdl.buf);
+        estrcpy_s(ezhdl.buf+ezhdl.prefix_len,CSL_BUF_LEN-ezhdl.prefix_len,autocomplete);
+        ezhdl.bufp=ezhdl.bufl=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
         ezcsl_send_printf("\r\n");
         ezport_send_str(ezhdl.buf, ezhdl.bufl);
     }
@@ -417,13 +421,13 @@ static void ezcsl_tabcomplete(void)
  * @author Jinlin Deng
  */
 Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(uint16_t,ez_param_t* )){
-    if (strlen(title_main)==0 || strlen(title_main)>=10 || callback==NULL){
+    if (estrlen(title_main)==0 || estrlen(title_main)>=10 || callback==NULL){
         return NULL;
     }
     
         Ez_CmdUnit_t *p = cmd_unit_head;
         while (p != NULL) { //duplicate
-            if(strcmp(p->title_main,title_main)==0){
+            if(estrcmp(p->title_main,title_main)==0){
                 return NULL;
             }
             p = p->next;
@@ -459,12 +463,12 @@ Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe 
  */
 ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc)
 {
-    if (strlen(para_desc) > PARA_LEN_MAX) {
+    if (estrlen(para_desc) > PARA_LEN_MAX) {
         return EZ_ERR;
     }
     Ez_Cmd_t *p = cmd_head;
     while (p != NULL) { // duplicate
-        if (strcmp(p->unit->title_main, unit->title_main) == 0 && (strcmp(p->title_sub, title_sub) == 0 || p->id == id)) {
+        if (estrcmp(p->unit->title_main, unit->title_main) == 0 && (estrcmp(p->title_sub, title_sub) == 0 || p->id == id)) {
             return EZ_ERR;
         }
         p = p->next;
@@ -474,7 +478,7 @@ ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, uint16_t id, const char *title_s
     p_add->describe = CHECK_NULL_STR(describe);
     p_add->next = NULL;
     p_add->title_sub = CHECK_NULL_STR(title_sub);
-    p_add->para_num = strlen(para_desc);
+    p_add->para_num = estrlen(para_desc);
     p_add->para_desc = para_desc;
     p_add->unit = unit;
     p_add->id = id;
@@ -518,14 +522,14 @@ static void buf_to_history(void)
     }
     if (history_head == NULL) {
         cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-        strcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
+        estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
         p_add->next=NULL;
         history_head = p_add;
         cur_history_len++;
     } else {
         if (cur_history_len < HISTORY_LEN) { // first insert
             cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-            strcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
+            estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
             p_add->next = history_head;
             history_head = p_add;
             cur_history_len++;
@@ -540,7 +544,7 @@ static void buf_to_history(void)
                 p_last = p_last->next;
             }
             p_last_parent->next = NULL;
-            strcpy_s(p_last->history,CSL_BUF_LEN, ezhdl.buf);
+            estrcpy_s(p_last->history,CSL_BUF_LEN, ezhdl.buf);
             p_last->next = history_head;
             history_head = p_last;
         }
@@ -552,8 +556,8 @@ static void buf_to_history(void)
  * @author Jinlin Deng
  */
 static void load_history(void){
-    strcpy_s(ezhdl.buf,CSL_BUF_LEN,cur_history->history);
-    ezhdl.bufl=ezhdl.bufp=strlen(ezhdl.buf);
+    estrcpy_s(ezhdl.buf,CSL_BUF_LEN,cur_history->history);
+    ezhdl.bufl=ezhdl.bufp=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
     ezcsl_send_printf("\033[0G%s\033[K",ezhdl.buf);
 }
 static void last_history_to_buf(void){
