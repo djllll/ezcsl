@@ -20,6 +20,7 @@
     } while (0)
 #endif
 
+// put it in your receiver
 extern void ezport_receive_a_char(char c);
 
 #define WELCOME \
@@ -72,7 +73,7 @@ int main(void)
     ezcsl_cmd_register(testunit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
     ezcsl_cmd_register(testunit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
 
-    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("mul", "multi-type parameters",test_auto_callback);
+    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("echo", "echo your input",test_auto_callback);
     ezcsl_cmd_register(testautocomplete, TEST_MUL_ID, "test", "input 'sfi'","sfi");
 
     /* input */
