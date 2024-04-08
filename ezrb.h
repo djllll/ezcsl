@@ -5,7 +5,7 @@
 
 #define RB_BUF_LEN 32
 #define MOD_BUFLEN(x) ((x)&31)
-#define RB_DATA_T uint8_t
+#define RB_DATA_T unsigned char
 
 typedef enum{
     RB_OK,

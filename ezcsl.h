@@ -1,8 +1,10 @@
 #ifndef _EZCSL_H_
 #define _EZCSL_H_
 
-#include "stdint.h"
 #include "stdio.h"
+
+typedef unsigned short ezuint16_t;
+typedef unsigned char ezuint8_t;
 
 #define CSL_BUF_LEN     40  //console buf len (include prefix)
 #define HISTORY_LEN     3  //history record
@@ -29,7 +31,7 @@ typedef enum{
 typedef struct CmdUnitObj{
     const char *title_main;
     const char *describe;
-    void (*callback)(uint16_t ,ez_param_t*);
+    void (*callback)(ezuint16_t ,ez_param_t*);
     struct CmdUnitObj *next;
 }Ez_CmdUnit_t;
 
@@ -37,8 +39,8 @@ typedef struct CmdObj{
     struct CmdUnitObj *unit;
     const char *title_sub;
     const char *describe;
-    uint16_t id;
-    uint8_t para_num;
+    ezuint16_t id;
+    ezuint8_t para_num;
     const char *para_desc;
     struct CmdObj *next;
 }Ez_Cmd_t;
@@ -46,12 +48,12 @@ typedef struct CmdObj{
 extern void ezcsl_init(const char *prefix,const char *welcome);
 extern void ezcsl_deinit(void); 
 extern void ezcsl_tick(void);
-extern Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(uint16_t,ez_param_t* ));
-extern ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char* para_desc);
-extern void ezport_send_str(char *str, uint16_t len);
+extern Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(ezuint16_t,ez_param_t* ));
+extern ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, ezuint16_t id, const char *title_sub, const char *describe, const char* para_desc);
+extern void ezport_send_str(char *str, ezuint16_t len);
 #define ezcsl_send_printf(fmt, ...)                                        \
     do {                                                                   \
-        uint16_t _d_printed;                                               \
+        ezuint16_t _d_printed;                                               \
         char _d_dat_buf[PRINT_BUF_LEN];                                    \
         _d_printed = snprintf(_d_dat_buf, PRINT_BUF_LEN, fmt, ##__VA_ARGS__); \
         ezport_send_str(_d_dat_buf, _d_printed);                                 \

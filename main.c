@@ -4,7 +4,7 @@
 
 #define WINDOWS_INPUT 
 
-#ifdef WINDOWS_INTPUT
+#ifdef WINDOWS_INPUT
 #include <conio.h>
 #else
 
@@ -20,6 +20,7 @@
     } while (0)
 #endif
 
+// put it in your receiver
 extern void ezport_receive_a_char(char c);
 
 #define WELCOME \
@@ -35,7 +36,7 @@ extern void ezport_receive_a_char(char c);
 #define TEST_ADD3_ID 1
 #define TEST_MUL_ID 0
 
-void eztest_cmd_callback(uint16_t id, ez_param_t* para)
+void test_cmd_callback(ezuint16_t id, ez_param_t* para)
 {
     switch (id) {
     case TEST_ADD2_ID: 
@@ -48,7 +49,7 @@ void eztest_cmd_callback(uint16_t id, ez_param_t* para)
         break;
     }
 }
-void eztest_auto_callback(uint16_t id,ez_param_t* para){
+void test_auto_callback(ezuint16_t id,ez_param_t* para){
     switch (id)
     {
     case TEST_MUL_ID:
@@ -68,15 +69,15 @@ int main(void)
     ezcsl_init("\033[36mTEST:\033[m ",WELCOME);
     
     /* add cmd */
-    Ez_CmdUnit_t *testunit = ezcsl_cmd_unit_create("test", "add test callback",eztest_cmd_callback);
+    Ez_CmdUnit_t *testunit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
     ezcsl_cmd_register(testunit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
     ezcsl_cmd_register(testunit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
 
-    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("mul", "multi-type parameters",eztest_auto_callback);
+    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("echo", "echo your input",test_auto_callback);
     ezcsl_cmd_register(testautocomplete, TEST_MUL_ID, "test", "input 'sfi'","sfi");
 
     /* input */
-#ifdef WINDOWS_INTPUT
+#ifdef WINDOWS_INPUT
     char c;
     do {
         c = getch();
