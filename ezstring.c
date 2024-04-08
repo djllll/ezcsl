@@ -54,6 +54,7 @@ ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
         overflow(s, _DstSize);
         *_Dst++ = *_Src++;
     }
+    *_Dst=0;
     return EZSTR_OK;
 }
 
