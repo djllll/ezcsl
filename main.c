@@ -35,7 +35,7 @@ extern void ezport_receive_a_char(char c);
 #define TEST_ADD3_ID 1
 #define TEST_MUL_ID 0
 
-void test_cmd_callback(uint16_t id, ez_param_t* para)
+void test_cmd_callback(ezuint16_t id, ez_param_t* para)
 {
     switch (id) {
     case TEST_ADD2_ID: 
@@ -48,7 +48,7 @@ void test_cmd_callback(uint16_t id, ez_param_t* para)
         break;
     }
 }
-void test_auto_callback(uint16_t id,ez_param_t* para){
+void test_auto_callback(ezuint16_t id,ez_param_t* para){
     switch (id)
     {
     case TEST_MUL_ID:
