@@ -85,12 +85,11 @@ void ezport_receive_a_char(char c)
  */
 void ezport_send_str(char *str, ezuint16_t len)
 {
-    /**
-     * Write your code here
-     */
+    /** Write your code here ↓↓↓↓ */
     for (int i = 0; i < len; i++) {
         putchar(str[i]);
     }
+    /** Write your code here ↑↑↑↑ */
 }
 
 
