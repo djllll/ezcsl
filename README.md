@@ -3,7 +3,7 @@ Ezcsl is a console programming by C ,that can be used for MCU terminal simulatio
 
 ## Migration
 1. copy `ez*.c/h` to your project;
-2. `ezport_receive_a_char` use to receive a character,put it in your receiver;
+2. `ezport_receive_a_char` use to receive a character,call it in your receiver;
 3. write your own sending code in `ezport_send_str`
 4. ok.
 
@@ -26,7 +26,7 @@ Ezcsl is a console programming by C ,that can be used for MCU terminal simulatio
 # Example 
 The code in this repository can work in Win10
 
-## How to run it
+## How to run this example
 1. clone this repo
 2. cd this repo
 3. `gcc *.c -o example`
