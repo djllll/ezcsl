@@ -3,9 +3,7 @@
 #include "ezrb.h"
 #include "ezstring.h"
 
-/* your include begin */
 
-/* your include end */
 
 
 
@@ -34,7 +32,6 @@ static struct EzCslHandleStruct {
 
 /* ez console port function */
 void ezport_receive_a_char(char c);
-void ezport_send_str(char *str, ezuint16_t len);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_deinit(void);
@@ -77,20 +74,6 @@ void ezport_receive_a_char(char c)
     // DBGprintf("input :(%x)",c);
 }
 
-/**
- * use this to send
- * @param str str need to send
- * @param len the length of the str
- * @author Jinlin Deng
- */
-void ezport_send_str(char *str, ezuint16_t len)
-{
-    /** Write your code here ↓↓↓↓ */
-    for (int i = 0; i < len; i++) {
-        putchar(str[i]);
-    }
-    /** Write your code here ↑↑↑↑ */
-}
 
 
 /**

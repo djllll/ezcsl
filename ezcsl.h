@@ -3,8 +3,7 @@
 
 #include "stdio.h"
 
-typedef unsigned short ezuint16_t;
-typedef unsigned char ezuint8_t;
+#include "ezcsl_port.h"
 
 #define CSL_BUF_LEN     40  //console buf len (include prefix)
 #define HISTORY_LEN     3  //history record
