@@ -5,7 +5,7 @@
 #define WINDOWS_INPUT 
 
 #ifdef WINDOWS_INPUT
-#include <conio.h>
+#include <stdlib.h>
 #else
 
 #define INPUT_CMD_MANUALLY(cmd)                \
@@ -80,10 +80,12 @@ int main(void)
 #ifdef WINDOWS_INPUT
     char c;
     do {
-        c = getch();
+        system("stty raw -echo");
+        c = getchar();
+        system("stty cooked echo");
         ezport_receive_a_char(c);
         ezcsl_tick();
-    } while (c!=0x1b); //esc
+    } while (c!=CTRL_D_KV); //quit
 #else 
     INPUT_CMD_MANUALLY("test,add2,1,2");
 #endif

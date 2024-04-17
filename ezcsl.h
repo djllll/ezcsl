@@ -17,10 +17,11 @@
 #define ez_param_t      void*
 
 
-#define BACKSPACE_KV 0x08
-#define TAB_KV 0x09
-#define ENTER_KV 0x0d
-#define CTRL_C_KV 0x03
+#define BACKSPACE_KV    0x08
+#define TAB_KV          0x09
+#define ENTER_KV        0x0d
+#define CTRL_C_KV       0x03
+#define CTRL_D_KV       0x04
 
 typedef enum{
     EZ_OK=0,

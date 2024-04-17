@@ -71,7 +71,7 @@ static void ezcsl_cmd_help_callback(ezuint16_t id,ez_param_t* para);
 void ezport_receive_a_char(char c)
 {
     ezrb_push(ezhdl.rb,(ezuint8_t)c);
-    // DBGprintf("input :(%x)",c);
+    // DBGprintf("input :(%02x,%c)",c,c);
 }
 
 
@@ -124,20 +124,89 @@ void ezcsl_deinit(void){
 }
 
 
-void ezcsl_tick(void)
-{
-    static ezuint8_t key_two_bytes_flag = 0; // direction keys
+
+
+#define DIR_KEY_DETECT(c, up, down, left, right) \
+    do {                                         \
+        if (c == left) {                         \
+            if (ezhdl.bufp > ezhdl.prefix_len) { \
+                ezcsl_send_printf("\033[1D");    \
+                ezhdl.bufp--;                    \
+            };                                   \
+        } else if (c == right) {                 \
+            if (ezhdl.bufp < ezhdl.bufl) {       \
+                ezcsl_send_printf("\033[1C");    \
+                ezhdl.bufp++;                    \
+            }                                    \
+        } else if (c == up) {                    \
+            last_history_to_buf();               \
+        } else if (c == down) {                  \
+            next_history_to_buf();               \
+        }                                        \
+    } while (0)
+
+#define DELETE_KEY_DETECT(c, delete)                               \
+    do {                                                           \
+        if (c == delete &&ezhdl.bufp < ezhdl.bufl) {               \
+            ezcsl_send_printf("\033[s");                           \
+            for (ezuint16_t i = ezhdl.bufp; i < ezhdl.bufl; i++) { \
+                ezhdl.buf[i] = ezhdl.buf[i + 1];                   \
+                ezport_send_str(ezhdl.buf + i, 1);                 \
+            }                                                      \
+            ezhdl.bufp;                                            \
+            ezhdl.bufl--;                                          \
+            ezcsl_send_printf("\033[K\033[u");                     \
+        }                                                          \
+    } while (0)
+                                                     \
+
+#define IS_POWERSHELL_PREFIX(c) (c==0x00)
+#define IS_BASH_PREFIX(c)       (c==0x1b)
+#define IS_BASH_1_PREFIX(c)     (c=='[')
+#define IS_BASH_2_PREFIX(c)     (c=='3')
+
+#define MATCH_MODE_DEFAULT      0
+#define MATCH_MODE_POWERSHELL   1
+#define MATCH_MODE_BASH         2
+#define MATCH_MODE_BASH_1       3
+#define MATCH_MODE_BASH_2       4
+
+void ezcsl_tick(void) {
+    static ezuint8_t match_mode = MATCH_MODE_DEFAULT; // direction keys
     ezuint8_t c;
     while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
-        if (!key_two_bytes_flag) {
-            if (KEY_IS_VISIBLE(c) && ezhdl.bufl < CSL_BUF_LEN-1) {
+        switch (match_mode) {
+        case MATCH_MODE_POWERSHELL:
+            DIR_KEY_DETECT(c, 0x48, 0x50, 0x4b, 0x4d);
+            match_mode = MATCH_MODE_DEFAULT;
+            break;
+        case MATCH_MODE_BASH:
+            if (IS_BASH_1_PREFIX(c)) {
+                match_mode = MATCH_MODE_BASH_1;
+                break;
+            }
+            match_mode = MATCH_MODE_DEFAULT;
+            break;
+        case MATCH_MODE_BASH_1:
+            if (IS_BASH_2_PREFIX(c)) {
+                match_mode = MATCH_MODE_BASH_2;
+                break;
+            }
+            DIR_KEY_DETECT(c, 'A', 'B', 'D', 'C');
+            match_mode = MATCH_MODE_DEFAULT;
+            break;
+        case MATCH_MODE_BASH_2:
+            DELETE_KEY_DETECT(c, '~');
+            break;
+        case MATCH_MODE_DEFAULT:
+        default:
+            if (KEY_IS_VISIBLE(c) && ezhdl.bufl < CSL_BUF_LEN - 1) {
                 /* visible char */
                 for (ezuint16_t i = ezhdl.bufl; i >= ezhdl.bufp + 1; i--) {
                     ezhdl.buf[i] = ezhdl.buf[i - 1];
                 }
                 ezhdl.buf[ezhdl.bufp] = c;
                 ezcsl_send_printf("\033[s");
-
                 ezport_send_str(ezhdl.buf + ezhdl.bufp, ezhdl.bufl - ezhdl.bufp + 1);
                 ezcsl_send_printf("\033[u\033[1C");
                 ezhdl.bufp++;
@@ -154,7 +223,7 @@ void ezcsl_tick(void)
                 ezcsl_send_printf("\033[K\033[u");
             } else if (c == ENTER_KV) {
                 /* enter */
-                ezhdl.buf[ezhdl.bufl] = 0; // cmd end 
+                ezhdl.buf[ezhdl.bufl] = 0; // cmd end
                 ezcsl_submit();
             } else if (c == CTRL_C_KV) {
                 /* ctrl+c */
@@ -164,47 +233,16 @@ void ezcsl_tick(void)
                 /* tab */
                 ezhdl.buf[ezhdl.bufp] = 0; // cmd end
                 ezcsl_tabcomplete();
-            }else if (c == 0xe0 || c == 0x00) { 
-                //TODO the prefix of some special keys is 0x00,most is 0xe0 
-                key_two_bytes_flag = 1;
+            } else if (IS_POWERSHELL_PREFIX(c)) {
+                match_mode = MATCH_MODE_POWERSHELL;
+            } else if (c == 0x1b) {
+                match_mode = MATCH_MODE_BASH;
             }
-        } else {
-            if (c == 0x4b) {
-                /* left arrow */
-                if (ezhdl.bufp > ezhdl.prefix_len) {
-                    ezcsl_send_printf("\033[1D");
-                    ezhdl.bufp--;
-                }
-            } else if (c == 0x4d) {
-                /* right arrow */
-                if (ezhdl.bufp < ezhdl.bufl) {
-                    ezcsl_send_printf("\033[1C");
-                    ezhdl.bufp++;
-                }
-            } else if (c == 0x48) {
-                /* up arrow */
-                last_history_to_buf();
-            } else if (c == 0x50) {
-                /* down arrow */
-                next_history_to_buf();
-            } else if (c == 0x53 && ezhdl.bufp < ezhdl.bufl) {
-                /* delete */
-                ezcsl_send_printf("\033[s");
-                for (ezuint16_t i = ezhdl.bufp; i < ezhdl.bufl; i++) {
-                    ezhdl.buf[i] = ezhdl.buf[i + 1];
-                    ezport_send_str(ezhdl.buf + i, 1);
-                }
-                ezhdl.bufp;
-                ezhdl.bufl--;
-                ezcsl_send_printf("\033[K\033[u");
-            }
-            key_two_bytes_flag = 0;
+            break;
         }
         // DBGprintf("your input is %x\r\n",c);
     }
 }
-
-
 
 
 static void ezcsl_submit(void)
