@@ -177,7 +177,8 @@ void ezcsl_tick(void) {
     while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
         switch (match_mode) {
         case MATCH_MODE_POWERSHELL:
-            DIR_KEY_DETECT(c, 0x48, 0x50, 0x4b, 0x4d);
+            DIR_KEY_DETECT(c, 'H', 'P', 'K', 'M');
+            DELETE_KEY_DETECT(c, 'S');
             match_mode = MATCH_MODE_DEFAULT;
             break;
         case MATCH_MODE_BASH:

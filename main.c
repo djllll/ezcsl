@@ -2,22 +2,10 @@
 #include <stdio.h>
 
 
-#define WINDOWS_INPUT 
-
-#ifdef WINDOWS_INPUT
-#include <stdlib.h>
-#else
-
-#define INPUT_CMD_MANUALLY(cmd)                \
-    do {                                   \
-        char *tmp = (char *)cmd;           \
-        while (*tmp != 0) {                \
-            ezport_receive_a_char(*tmp++); \
-            ezcsl_tick();                  \
-        }                                  \
-        ezport_receive_a_char(ENTER_KV);   \
-        ezcsl_tick();                      \
-    } while (0)
+#ifdef _WIN32
+#include <conio.h>
+#elif defined(__linux__)
+#include "stdlib.h"
 #endif
 
 // put it in your receiver
@@ -77,18 +65,22 @@ int main(void)
     ezcsl_cmd_register(testautocomplete, TEST_MUL_ID, "test", "input 'sfi'","sfi");
 
     /* input */
-#ifdef WINDOWS_INPUT
     char c;
     do {
+        #ifdef _WIN32
+        c = getch();
+        #elif defined(__linux__)
         system("stty raw -echo");
         c = getchar();
         system("stty cooked echo");
+        #else
+        print('others platform')
+        return 0;
+        #endif
         ezport_receive_a_char(c);
         ezcsl_tick();
     } while (c!=CTRL_D_KV); //quit
-#else 
-    INPUT_CMD_MANUALLY("test,add2,1,2");
-#endif
+
 
     /* deinit */
     ezcsl_deinit();
