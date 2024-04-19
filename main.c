@@ -22,7 +22,10 @@ extern void ezport_receive_a_char(char c);
 
 #define TEST_ADD2_ID 0
 #define TEST_ADD3_ID 1
-#define TEST_MUL_ID 0
+
+#define ECHO_NONE_ID 0
+#define ECHO_ONE_ID 1
+#define ECHO_MUL_ID 2
 
 void test_cmd_callback(ezuint16_t id, ez_param_t* para)
 {
@@ -40,10 +43,15 @@ void test_cmd_callback(ezuint16_t id, ez_param_t* para)
 void test_auto_callback(ezuint16_t id,ez_param_t* para){
     switch (id)
     {
-    case TEST_MUL_ID:
-        ezcsl_send_printf("your input s:%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
+    case ECHO_NONE_ID:
+        ezcsl_send_printf("your input is none \r\n");
         break;
-    
+    case ECHO_ONE_ID:
+        ezcsl_send_printf("your input :%d\r\n", EZ_PtoI(para[0]));
+        break;
+    case ECHO_MUL_ID:
+        ezcsl_send_printf("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
+        break;
     default:
         break;
     }
@@ -62,7 +70,9 @@ int main(void)
     ezcsl_cmd_register(testunit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
 
     Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("echo", "echo your input",test_auto_callback);
-    ezcsl_cmd_register(testautocomplete, TEST_MUL_ID, "test", "input 'sfi'","sfi");
+    ezcsl_cmd_register(testautocomplete, ECHO_NONE_ID, "none", "input ","");
+    ezcsl_cmd_register(testautocomplete, ECHO_ONE_ID, "one", "input 'i'","i");
+    ezcsl_cmd_register(testautocomplete, ECHO_MUL_ID, "mul", "input 'sfi'","sfi");
 
     /* input */
     char c;

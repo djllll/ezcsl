@@ -275,7 +275,7 @@ static void ezcsl_submit(void)
                 subtitle=a_split;
                 break;
             default:
-                if(paranum<PARA_LEN_MAX){
+                if(paranum<PARA_LEN_MAX && estrlen(a_split)>0){
                     para[paranum]=(ez_param_t*)a_split;
                     paranum++;
                 }
