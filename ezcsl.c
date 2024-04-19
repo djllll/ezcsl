@@ -10,7 +10,7 @@
 #define KEY_IS_VISIBLE(c) ((c) >= 0x20 && (c) <= 0x7e)
 
 #define EXPAND_DESC(c) ((c)=='s'?"string":((c)=='i'?"integer":((c)=='f'?"float":"unkown")))
-#define DBGprintf printf
+#define DBGprintf ezcsl_send_printf
 
 const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
