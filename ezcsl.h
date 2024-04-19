@@ -64,30 +64,29 @@ extern void ezport_send_str(char *str, ezuint16_t len);
 #define ezcsl_send_string(str) ezport_send_str(str,estrlen(str))
 
 
-#define COLOR_OVER		    "\033[0m"
-#define COLOR_BLACK	 	    "\033[0;30m"
-#define COLOR_L_BLACK	 	"\033[1;30m"
-#define COLOR_RED      	    "\033[0;31m"
-#define COLOR_L_RED    	    "\033[1;31m"
-#define COLOR_GREEN    	    "\033[0;32m"
-#define COLOR_L_GREEN  	    "\033[1;32m"
-#define COLOR_YELLOW   	    "\033[0;33m"
-#define COLOR_L_YELLOW 	    "\033[1;33m"
-#define COLOR_BLUE     	    "\033[0;34m"
-#define COLOR_L_BLUE	 	"\033[1;34m"
-#define COLOR_PURPLE   	    "\033[0;35m"
-#define COLOR_L_PURPLE	    "\033[1;35m"
-#define COLOR_CYAN     	    "\033[0;36m"
-#define COLOR_L_CYAN   	    "\033[1;36m"
-#define COLOR_WHITE    	    "\033[0;37m"
-#define COLOR_L_WHITE    	"\033[1;37m"
+#define COLOR_BLACK(s)	 	    "\033[0;30m"s"\033[0m"
+#define COLOR_L_BLACK(s)	 	"\033[1;30m"s"\033[0m"
+#define COLOR_RED(s)      	    "\033[0;31m"s"\033[0m"
+#define COLOR_L_RED(s)    	    "\033[1;31m"s"\033[0m"
+#define COLOR_GREEN(s)    	    "\033[0;32m"s"\033[0m"
+#define COLOR_L_GREEN(s)  	    "\033[1;32m"s"\033[0m"
+#define COLOR_YELLOW(s)   	    "\033[0;33m"s"\033[0m"
+#define COLOR_L_YELLOW(s) 	    "\033[1;33m"s"\033[0m"
+#define COLOR_BLUE(s)     	    "\033[0;34m"s"\033[0m"
+#define COLOR_L_BLUE(s)	 	    "\033[1;34m"s"\033[0m"
+#define COLOR_PURPLE(s)   	    "\033[0;35m"s"\033[0m"
+#define COLOR_L_PURPLE(s)	    "\033[1;35m"s"\033[0m"
+#define COLOR_CYAN(s)     	    "\033[0;36m"s"\033[0m"
+#define COLOR_L_CYAN(s)   	    "\033[1;36m"s"\033[0m"
+#define COLOR_WHITE(s)    	    "\033[0;37m"s"\033[0m"
+#define COLOR_L_WHITE(s)    	"\033[1;37m"s"\033[0m"
 
 //#define BOLD          "\033[1m"
 //#define UNDERLINE     "\033[4m"
 
-#define EZ_LOGE(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_RED		format COLOR_OVER, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOGI(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_GREEN		format COLOR_OVER, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOGD(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_BLUE		format COLOR_OVER, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOG(TAG,format, ...)  do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(          format     , ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGE(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_RED(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGI(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_GREEN(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGD(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_BLUE(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOG(TAG,format, ...)  do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(format, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
 
 #endif
