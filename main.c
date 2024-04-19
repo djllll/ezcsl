@@ -40,11 +40,11 @@ void test_cmd_callback(ezuint16_t id, ez_param_t* para)
         break;
     }
 }
-void test_auto_callback(ezuint16_t id,ez_param_t* para){
+void echo_cmd_callback(ezuint16_t id,ez_param_t* para){
     switch (id)
     {
     case ECHO_NONE_ID:
-        ezcsl_send_printf("your input is none \r\n");
+        EZ_LOGE("test","your input is none ");
         break;
     case ECHO_ONE_ID:
         ezcsl_send_printf("your input :%d\r\n", EZ_PtoI(para[0]));
@@ -65,14 +65,14 @@ int main(void)
     ezcsl_init("\033[36mTEST:\033[m ",WELCOME);
     
     /* add cmd */
-    Ez_CmdUnit_t *testunit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
-    ezcsl_cmd_register(testunit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(testunit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
+    Ez_CmdUnit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
+    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
+    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
 
-    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("echo", "echo your input",test_auto_callback);
-    ezcsl_cmd_register(testautocomplete, ECHO_NONE_ID, "none", "input ","");
-    ezcsl_cmd_register(testautocomplete, ECHO_ONE_ID, "one", "input 'i'","i");
-    ezcsl_cmd_register(testautocomplete, ECHO_MUL_ID, "mul", "input 'sfi'","sfi");
+    Ez_CmdUnit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input",echo_cmd_callback);
+    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ","");
+    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'i'","i");
+    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'sfi'","sfi");
 
     /* input */
     char c;
