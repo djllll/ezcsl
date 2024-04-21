@@ -18,7 +18,7 @@
 #define ez_param_t      void*
 
 
-#define BACKSPACE_KV    0x08
+#define BACKSPACE_KV    0x7f
 #define TAB_KV          0x09
 #define ENTER_KV        0x0d
 #define CTRL_C_KV       0x03

@@ -158,7 +158,7 @@ void ezcsl_deinit(void){
             ezcsl_send_printf("\033[K\033[u");                     \
         }                                                          \
     } while (0)
-                                                     \
+                                                     
 
 #define IS_POWERSHELL_PREFIX(c) (c==0x00)
 #define IS_BASH_PREFIX(c)       (c==0x1b)
@@ -198,6 +198,7 @@ void ezcsl_tick(void) {
             break;
         case MATCH_MODE_BASH_2:
             DELETE_KEY_DETECT(c, '~');
+            match_mode = MATCH_MODE_DEFAULT;
             break;
         case MATCH_MODE_DEFAULT:
         default:
