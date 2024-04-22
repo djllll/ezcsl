@@ -84,9 +84,9 @@ extern void ezport_send_str(char *str, ezuint16_t len);
 //#define BOLD          "\033[1m"
 //#define UNDERLINE     "\033[4m"
 
-#define EZ_LOGE(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_RED(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOGI(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_GREEN(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOGD(TAG,format, ...) do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(COLOR_L_BLUE(format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
-#define EZ_LOG(TAG,format, ...)  do{ezcsl_send_string(TAG);ezcsl_send_string(": ");ezcsl_send_printf(format, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGE(TAG,format, ...) do{ezcsl_send_printf(COLOR_L_RED("["TAG"] "format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGI(TAG,format, ...) do{ezcsl_send_printf(COLOR_L_GREEN("["TAG"] "format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOGD(TAG,format, ...) do{ezcsl_send_printf(COLOR_L_BLUE("["TAG"] "format), ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
+#define EZ_LOG(TAG,format, ...)  do{ezcsl_send_printf("["TAG"] "format, ##__VA_ARGS__);ezcsl_send_string("\r\n");}while(0)
 
 #endif

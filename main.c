@@ -64,6 +64,8 @@ int main(void)
     /* init */
     ezcsl_init("\033[36mTEST:\033[m ",WELCOME);
     
+    EZ_LOGI("EzCsl","init ok");
+
     /* add cmd */
     Ez_CmdUnit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
     ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
