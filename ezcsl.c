@@ -76,12 +76,10 @@ static void ezcsl_cmd_help_callback(ezuint16_t id,ez_param_t* para);
  */
 void ezcsl_reset_prefix(void)
 {
-    LOCK();
-    ezport_send_str((char *)ezhdl.prefix, ezhdl.prefix_len);
+    ezcsl_printf(MOVE_CURSOR_ABS(0)"%s"ERASE_TO_END(), ezhdl.prefix);
     ezhdl.buf[0] = 0;
     ezhdl.bufl = 0;
     ezhdl.bufp = 0;
-    UNLOCK();
 }
 
 
