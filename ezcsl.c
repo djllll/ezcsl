@@ -317,6 +317,8 @@ static void ezcsl_submit(void)
         if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
             if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){
                 ezcsl_printf(COLOR_RED("Xmodem Timeout!"));
+            }else{
+                ezcsl_printf(COLOR_RED("Xmodem OK!"));
             }
             return;
         }

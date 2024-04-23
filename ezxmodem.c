@@ -1,6 +1,7 @@
 #include "ezxmodem.h"
 #include "stdlib.h"
 
+#include "stdio.h"
 #define XM_SOH 0x01
 #define XM_EOT 0x04
 #define XM_ACK 0x06
@@ -48,11 +49,8 @@ xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg)
     ezuint8_t sendbuf;
     ezuint16_t timeout = 0;
     ezuint8_t last_packet_num = 0;
-    while (ezrb_pop(rb, buf) != RB_EMPTY)
-        ; // clear ring buffer
     sendbuf = XM_C;
     ezport_send_str(&sendbuf, 1);
-
 
     while (1) {
         if (ezrb_pop(rb, buf + bufp) == RB_EMPTY) {
