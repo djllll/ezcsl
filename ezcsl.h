@@ -4,6 +4,7 @@
 #include "stdarg.h"
 #include "ezstring.h"
 #include "ezcsl_port.h"
+#include "ezxmodem.h"
 
 #define CSL_BUF_LEN     40  //console buf len (include prefix)
 #define HISTORY_LEN     3  //history record
@@ -42,6 +43,7 @@ typedef struct CmdObj{
 
 extern void ezcsl_init(const char *prefix,const char *welcome);
 extern void ezcsl_deinit(void); 
+extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 extern ezuint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
 

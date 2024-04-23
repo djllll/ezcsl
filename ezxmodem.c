@@ -1,7 +1,5 @@
 #include "ezxmodem.h"
 #include "stdlib.h"
-#include "ezcsl_port.h"
-#include "ezrb.h"
 
 #define XM_SOH 0x01
 #define XM_EOT 0x04

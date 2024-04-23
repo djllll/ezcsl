@@ -1,6 +1,10 @@
 #ifndef _EZXMODEM_H_
 #define _EZXMODEM_H_
 
+#include "ezcsl_port.h"
+
+#include "ezrb.h"
+
 typedef enum{
     X_SEND_NEXT = 0,
     X_SEND_REPEAT,

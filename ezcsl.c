@@ -3,11 +3,10 @@
 #include "ezrb.h"
 #include "ezstring.h"
 #include "stdio.h"  // vsprintf
-#include "ezxmodem.h"
 
 
 #define IS_VISIBLE(c)       ((c) >= 0x20 && (c) <= 0x7e)
-#define IS_BACKSPACE(c)     ((c)==0x08)
+#define IS_BACKSPACE(c)     ((c)==0x08 || (c)==0x7f)
 #define IS_TAB(c)           ((c)==0x09)
 #define IS_ENTER(c)         ((c)==0x0d)
 #define IS_CTRL_C(c)        ((c)==0x03)
@@ -46,7 +45,7 @@ static struct EzCslHandleStruct {
 void ezport_receive_a_char(char c);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
-void ezcsl_xmodem_init(const char *modem_prefix,xmodem_cfg_t *cfg);
+void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 void ezcsl_deinit(void);
 ezuint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
@@ -125,7 +124,7 @@ void ezcsl_init(const char *prefix,const char *welcome)
  *
  * @param modem_prefix
  */
-void ezcsl_xmodem_init(const char *modem_prefix,xmodem_cfg_t *cfg)
+void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg)
 {
     ezhdl.modem_prefix = modem_prefix;
     ezhdl.modem_cfg = cfg;
@@ -249,9 +248,9 @@ ezuint8_t ezcsl_tick(void) {
                 ezcsl_printf(RESTORE_CURSOR_POS()CURSOR_FORWARD(1));
                 ezhdl.bufp++;
                 ezhdl.bufl++;
-            } else if (IS_BACKSPACE(c) && ezhdl.bufp > 0) { // cannot delete the prefix
+            } else if (IS_BACKSPACE(c) && ezhdl.bufp > 0) {
                 /* backspace */
-                ezcsl_printf(CURSOR_FORWARD(1)SAVE_CURSOR_POS());
+                ezcsl_printf(CURSOR_BACK(1)SAVE_CURSOR_POS());
                 for (ezuint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
                     ezhdl.buf[i] = ezhdl.buf[i + 1];
                     ezport_send_str(ezhdl.buf + i, 1);
@@ -315,8 +314,10 @@ void ezcsl_printf(const char *fmt, ...){
 static void ezcsl_submit(void)
 {
     if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
-        if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen_s(ezhdl.buf,CSL_BUF_LEN))==0){
-            xmodem_start(ezhdl.rb,ezhdl.modem_cfg);
+        if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
+            if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){
+                ezcsl_printf(COLOR_RED("Xmodem Timeout!"));
+            }
             return;
         }
     }

@@ -1,6 +1,6 @@
 #include "ezcsl.h"
 #include <stdio.h>
-
+#include <unistd.h>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -8,8 +8,6 @@
 #include "stdlib.h"
 #endif
 
-// put it in your receiver
-extern void ezport_receive_a_char(char c);
 
 #define WELCOME \
 "\033[36m    ______      ______                       __\r\n\
@@ -58,13 +56,40 @@ void echo_cmd_callback(ezuint16_t id,ez_param_t* para){
     return ;
 }
 
+static xmodem_rev_func_t xmodem_rev_frame_cb(char *rev){
+    printf("get");
+    if(rev!=NULL){
+        for(int i=0;i<128;i++){
+            printf("%02x ",rev[i]);
+        }
+    }else{
+        printf("finish");
+    }
+    return X_SEND_NEXT;
+}
+
+static void xmodem_delay_ms(ezuint16_t ms)
+{
+    for (int i = 0; i < 10000; i++) {
+        for (int j = 0; j < 10000; j++) {
+        }
+    }
+}
+
+static xmodem_cfg_t xmodem_cfg = {
+    .delay_ms = xmodem_delay_ms,
+    .frame_cb = xmodem_rev_frame_cb
+} ;
 
 int main(void)
 {
     /* init */
     ezcsl_init("\033[36mTEST:\033[m ",WELCOME);
-    
     EZ_LOGI("EzCsl","init ok");
+
+
+    ezcsl_xmodem_set("rx",&xmodem_cfg);
+
 
     /* add cmd */
     Ez_CmdUnit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
