@@ -46,6 +46,7 @@ void ezport_receive_a_char(char c);
 void ezcsl_init(const char *prefix ,const char *welcome);
 void ezcsl_deinit(void);
 void ezcsl_tick(void);
+void ezcsl_reset_prefix(void);
 void ezcsl_printf(const char *fmt, ...);
 
 static void ezcsl_tabcomplete(void);
@@ -65,13 +66,21 @@ ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit,ezuint16_t id,const char *title_s
 /* ez inner cmd */
 static void ezcsl_cmd_help_callback(ezuint16_t id,ez_param_t* para);
 
-#define EZCSL_RST()                                              \
-    do {                                                         \
-        ezport_send_str((char *)ezhdl.prefix, ezhdl.prefix_len); \
-        ezhdl.buf[0] = 0;                                        \
-        ezhdl.bufl = 0;                                          \
-        ezhdl.bufp = 0;                                          \
-    } while (0)
+
+
+/**
+ * @brief reset with prefix
+ * 
+ */
+void ezcsl_reset_prefix(void)
+{
+    LOCK();
+    ezport_send_str((char *)ezhdl.prefix, ezhdl.prefix_len);
+    ezhdl.buf[0] = 0;
+    ezhdl.bufl = 0;
+    ezhdl.bufp = 0;
+    UNLOCK();
+}
 
 
 /**
@@ -103,7 +112,7 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezcsl_cmd_register(unit,0,NULL,NULL,"");
     ezport_send_str((char*)welcome,estrlen(welcome)); 
     ezcsl_printf("you can input '?' for help\r\n");
-    EZCSL_RST();
+    ezcsl_reset_prefix();
 }
 
 /**
@@ -241,7 +250,7 @@ void ezcsl_tick(void) {
             } else if (IS_CTRL_C(c)) {
                 /* ctrl+c */
                 ezcsl_printf("^C\r\n");
-                EZCSL_RST();
+                ezcsl_reset_prefix();
             } else if (IS_TAB(c)) {
                 /* tab */
                 ezhdl.buf[ezhdl.bufp] = 0; // cmd end
@@ -264,9 +273,9 @@ void ezcsl_tick(void) {
  * @param ... 
  */
 void ezcsl_printf(const char *fmt, ...){
+    LOCK();
     ezuint16_t printed;
     va_list args;
-    LOCK();
     char dat_buf[PRINT_BUF_LEN];
     va_start(args, fmt);
     printed = vsnprintf(dat_buf,PRINT_BUF_LEN, fmt, args); 
@@ -381,7 +390,7 @@ static void ezcsl_submit(void)
     }
         
     
-    EZCSL_RST();
+    ezcsl_reset_prefix();
 }
 
 static void ezcsl_tabcomplete(void)

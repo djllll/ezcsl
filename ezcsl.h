@@ -43,6 +43,8 @@ typedef struct CmdObj{
 extern void ezcsl_init(const char *prefix,const char *welcome);
 extern void ezcsl_deinit(void); 
 extern void ezcsl_tick(void);
+extern void ezcsl_reset_prefix(void);
+
 extern Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(ezuint16_t,ez_param_t* ));
 extern ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, ezuint16_t id, const char *title_sub, const char *describe, const char* para_desc);
 extern void ezport_send_str(char *str, ezuint16_t len);
@@ -73,12 +75,26 @@ extern void ezcsl_printf(const char *fmt, ...);
 #define COLOR_WHITE(s)    	    "\033[0;37m"s"\033[0m"
 #define COLOR_L_WHITE(s)    	"\033[1;37m"s"\033[0m"
 
-//#define BOLD          "\033[1m"
-//#define UNDERLINE     "\033[4m"
 
-#define EZ_LOGE(TAG,format, ...) do{ezcsl_printf(COLOR_L_RED("["TAG"] "format"\r\n"), ##__VA_ARGS__);}while(0)
-#define EZ_LOGI(TAG,format, ...) do{ezcsl_printf(COLOR_L_GREEN("["TAG"] "format"\r\n"), ##__VA_ARGS__);}while(0)
-#define EZ_LOGD(TAG,format, ...) do{ezcsl_printf(COLOR_L_BLUE("["TAG"] "format"\r\n"), ##__VA_ARGS__);}while(0)
-#define EZ_LOG(TAG,format, ...)  do{ezcsl_printf("["TAG"] "format"\r\n", ##__VA_ARGS__);}while(0)
+#define EZ_LOGE(TAG, format, ...)                                                                \
+    do {                                                                                         \
+        ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_RED("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
+        ezcsl_reset_prefix();                                                                    \
+    } while (0)
+#define EZ_LOGI(TAG, format, ...)                                                                  \
+    do {                                                                                           \
+        ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_GREEN("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
+        ezcsl_reset_prefix();                                                                      \
+    } while (0)
+#define EZ_LOGD(TAG, format, ...)                                                                 \
+    do {                                                                                          \
+        ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_BLUE("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
+        ezcsl_reset_prefix();                                                                     \
+    } while (0)
+#define EZ_LOG(TAG, format, ...)                                                    \
+    do {                                                                            \
+        ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
+        ezcsl_reset_prefix();                                                       \
+    } while (0)
 
 #endif
