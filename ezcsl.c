@@ -284,6 +284,12 @@ void ezcsl_printf(const char *fmt, ...){
     UNLOCK();
 }
 
+
+
+/**
+ * @brief submit input
+ * 
+ */
 static void ezcsl_submit(void)
 {
     ezuint8_t paranum=0;
@@ -393,6 +399,11 @@ static void ezcsl_submit(void)
     ezcsl_reset_prefix();
 }
 
+
+/**
+ * @brief auto complete
+ * 
+ */
 static void ezcsl_tabcomplete(void)
 {
     char existed_cmdbuf[CSL_BUF_LEN] = {0};
@@ -545,6 +556,13 @@ ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, ezuint16_t id, const char *title
 }
 
 
+
+/**
+ * @brief help cmd callback
+ * 
+ * @param id cmd id
+ * @param para param
+ */
 static void ezcsl_cmd_help_callback(ezuint16_t id,ez_param_t* para)
 {
     Ez_CmdUnit_t *p = cmd_unit_head;
@@ -556,6 +574,8 @@ static void ezcsl_cmd_help_callback(ezuint16_t id,ez_param_t* para)
     }
     ezcsl_printf(COLOR_GREEN("=========================")" \r\n");
 }
+
+
 
 /**
  * move the buf to history
@@ -598,6 +618,7 @@ static void buf_to_history(void)
         }
     }
 }
+
 
 /**
  * move history to buf  
