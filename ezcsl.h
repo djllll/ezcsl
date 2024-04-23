@@ -49,7 +49,12 @@ extern void ezport_send_str(char *str, ezuint16_t len);
 extern void ezcsl_printf(const char *fmt, ...);
 
 
-
+#define MOVE_CURSOR_ABS(n)      "\033["#n"G"
+#define ERASE_TO_END()          "\033[K"
+#define SAVE_CURSOR_POS()       "\033[s"
+#define RESTORE_CURSOR_POS()    "\033[u"
+#define CURSOR_FORWARD(n)       "\033["#n"C"
+#define CURSOR_BACK(n)          "\033["#n"D"
 
 #define COLOR_BLACK(s)	 	    "\033[0;30m"s"\033[0m"
 #define COLOR_L_BLACK(s)	 	"\033[1;30m"s"\033[0m"
