@@ -6,6 +6,9 @@
 
 void ezport_send_str(char *str, ezuint16_t len);
 
+
+
+
 /**
  * use this to send
  * @param str str need to send

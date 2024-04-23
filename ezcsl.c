@@ -3,7 +3,7 @@
 #include "ezrb.h"
 #include "ezstring.h"
 #include "stdio.h"  // vsprintf
-
+#include "ezxmodem.h"
 
 
 #define IS_VISIBLE(c)       ((c) >= 0x20 && (c) <= 0x7e)
@@ -34,6 +34,8 @@ static struct EzCslHandleStruct {
     ezuint8_t historyp;
     ezrb_t *rb;
     volatile ezuint8_t lock;
+    const char *modem_prefix;
+    xmodem_cfg_t *modem_cfg;
 } ezhdl;
 
 #define LOCK() do{while(ezhdl.lock!=0);ezhdl.lock=1;}while(0)
@@ -44,8 +46,9 @@ static struct EzCslHandleStruct {
 void ezport_receive_a_char(char c);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
+void ezcsl_xmodem_init(const char *modem_prefix,xmodem_cfg_t *cfg);
 void ezcsl_deinit(void);
-void ezcsl_tick(void);
+ezuint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
 void ezcsl_printf(const char *fmt, ...);
 
@@ -102,6 +105,7 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix,const char *welcome)
 {
+    ezhdl.modem_prefix = NULL;
     ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
     ezhdl.prefix = prefix;
     ezhdl.bufp = 0;
@@ -113,6 +117,18 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezport_send_str((char*)welcome,estrlen(welcome)); 
     ezcsl_printf("you can input '?' for help\r\n");
     ezcsl_reset_prefix();
+}
+
+
+/**
+ * @brief modem init (optional),if you need xmodem,call this after `ezcsl_init`
+ *
+ * @param modem_prefix
+ */
+void ezcsl_xmodem_init(const char *modem_prefix,xmodem_cfg_t *cfg)
+{
+    ezhdl.modem_prefix = modem_prefix;
+    ezhdl.modem_cfg = cfg;
 }
 
 /**
@@ -191,7 +207,7 @@ void ezcsl_deinit(void){
  * @brief call it in a loop
  * 
  */
-void ezcsl_tick(void) {
+ezuint8_t ezcsl_tick(void) {
     static ezuint8_t match_mode = MATCH_MODE_DEFAULT; // direction keys
     ezuint8_t c;
     while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
@@ -251,18 +267,24 @@ void ezcsl_tick(void) {
                 /* ctrl+c */
                 ezcsl_printf("^C\r\n");
                 ezcsl_reset_prefix();
+            } else if (IS_CTRL_D(c)) {
+                /* ctrl+D */
+                ezcsl_printf("^D\r\n");
+                ezcsl_reset_prefix();
+                return 1;
             } else if (IS_TAB(c)) {
                 /* tab */
                 ezhdl.buf[ezhdl.bufp] = 0; // cmd end
                 ezcsl_tabcomplete();
             } else if (IS_POWERSHELL_PREFIX(c)) {
                 match_mode = MATCH_MODE_POWERSHELL;
-            } else if (c == 0x1b) {
+            } else if (IS_BASH_PREFIX(c)) {
                 match_mode = MATCH_MODE_BASH;
             }
             break;
         }
     }
+    return 0;
 }
 
 
@@ -292,6 +314,12 @@ void ezcsl_printf(const char *fmt, ...){
  */
 static void ezcsl_submit(void)
 {
+    if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
+        if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen_s(ezhdl.buf,CSL_BUF_LEN))==0){
+            xmodem_start(ezhdl.rb,ezhdl.modem_cfg);
+            return;
+        }
+    }
     ezuint8_t paranum=0;
     float paraF[PARA_LEN_MAX];
     int paraI[PARA_LEN_MAX];

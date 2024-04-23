@@ -90,8 +90,7 @@ int main(void)
         return 0;
         #endif
         ezport_receive_a_char(c);
-        ezcsl_tick();
-    } while (c!=0x04); //quit
+    } while (!ezcsl_tick()); //quit
 
 
     /* deinit */
