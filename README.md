@@ -12,7 +12,7 @@ Ezcsl is a console programming by C ,that can be used for MCU terminal simulatio
 1. call `ezcsl_init` for initialization
 2. call `ezcsl_cmd_unit_create` to create a cmd unit (first command)
 3. call `ezcsl_cmd_register`to create your cmd (second command)
-4. call `ezcsl_send_printf` to print everywhere you want (recommend call it in callback)
+4. call `ezcsl_printf` to print everywhere you want (recommend call it in callback)
 5. put `ezcsl_tick` in a loop
 
 ## Macro Configuration

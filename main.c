@@ -31,10 +31,10 @@ void test_cmd_callback(ezuint16_t id, ez_param_t* para)
 {
     switch (id) {
     case TEST_ADD2_ID: 
-        ezcsl_send_printf("result is %d\r\n",  EZ_PtoI(para[0]) +EZ_PtoI(para[1]));
+        ezcsl_printf("result is %d\r\n",  EZ_PtoI(para[0]) +EZ_PtoI(para[1]));
         break;
     case TEST_ADD3_ID:
-        ezcsl_send_printf("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
+        ezcsl_printf("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
         break;
     default:
         break;
@@ -47,10 +47,10 @@ void echo_cmd_callback(ezuint16_t id,ez_param_t* para){
         EZ_LOGE("test","your input is none ");
         break;
     case ECHO_ONE_ID:
-        ezcsl_send_printf("your input :%d\r\n", EZ_PtoI(para[0]));
+        ezcsl_printf("your input :%d\r\n", EZ_PtoI(para[0]));
         break;
     case ECHO_MUL_ID:
-        ezcsl_send_printf("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
+        ezcsl_printf("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
         break;
     default:
         break;
@@ -91,7 +91,7 @@ int main(void)
         #endif
         ezport_receive_a_char(c);
         ezcsl_tick();
-    } while (c!=CTRL_D_KV); //quit
+    } while (c!=0x04); //quit
 
 
     /* deinit */
