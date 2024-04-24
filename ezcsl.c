@@ -335,6 +335,9 @@ static void ezcsl_submit(void)
     buf_to_history();
     cur_history=NULL;
 
+    if (ezhdl.bufl > CSL_BUF_LEN - 1) {
+        ezhdl.bufl = CSL_BUF_LEN - 1;
+    }
     ezhdl.buf[ezhdl.bufl]=SPLIT_CHAR; // add a SPLIT_CHR to the end for estrtokc 
     // ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for estrtokc 
     while (1) {
