@@ -6,11 +6,7 @@
 #include "ezcsl_port.h"
 #include "ezxmodem.h"
 
-#define CSL_BUF_LEN     40  //console buf len (include prefix)
-#define HISTORY_LEN     3  //history record
-#define PRINT_BUF_LEN   150
-#define PARA_LEN_MAX    5
-#define SPLIT_CHAR      ',' 
+
 
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
 #define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
@@ -41,8 +37,19 @@ typedef struct CmdObj{
     struct CmdObj *next;
 }Ez_Cmd_t;
 
+typedef ezuint8_t ez_log_level_mask_t;
+#define LOG_LEVEL_V    0x01
+#define LOG_LEVEL_E    0x02
+#define LOG_LEVEL_I    0x04
+#define LOG_LEVEL_D    0x08
+#define LOG_LEVEL_ALL  0xff
+#define LOG_LEVEL_NONE 0x00
+
+
 extern void ezcsl_init(const char *prefix,const char *welcome);
 extern void ezcsl_deinit(void); 
+extern void ezcsl_log_level_set(ez_log_level_mask_t mask);
+extern ezuint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
 extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 extern ezuint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
@@ -78,25 +85,27 @@ extern void ezcsl_printf(const char *fmt, ...);
 #define COLOR_L_WHITE(s)    	"\033[1;37m"s"\033[0m"
 
 
+
+
 #define EZ_LOGE(TAG, format, ...)                                                                \
-    do {                                                                                         \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_E)) {                                                    \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_RED("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                    \
-    } while (0)
+    }
 #define EZ_LOGI(TAG, format, ...)                                                                  \
-    do {                                                                                           \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_I)) {                                                      \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_GREEN("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                      \
-    } while (0)
+    }
 #define EZ_LOGD(TAG, format, ...)                                                                 \
-    do {                                                                                          \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_D)) {                                                     \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_BLUE("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                     \
-    } while (0)
+    }
 #define EZ_LOG(TAG, format, ...)                                                    \
-    do {                                                                            \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_V)) {                                       \
         ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                       \
-    } while (0)
+    }
 
 #endif

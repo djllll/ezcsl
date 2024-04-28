@@ -33,9 +33,11 @@ static struct EzCslHandleStruct {
     ezuint8_t historyp;
     ezrb_t *rb;
     volatile ezuint8_t lock;
+    ez_log_level_mask_t log_level_mask;
     const char *modem_prefix;
     xmodem_cfg_t *modem_cfg;
 } ezhdl;
+
 
 #define LOCK() do{while(ezhdl.lock!=0);ezhdl.lock=1;}while(0)
 #define UNLOCK() do{ezhdl.lock=0;}while(0)
@@ -45,6 +47,8 @@ static struct EzCslHandleStruct {
 void ezport_receive_a_char(char c);
 
 void ezcsl_init(const char *prefix ,const char *welcome);
+void ezcsl_log_level_set(ez_log_level_mask_t mask);
+ezuint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
 void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 void ezcsl_deinit(void);
 ezuint8_t ezcsl_tick(void);
@@ -99,6 +103,7 @@ void ezport_receive_a_char(char c)
  * 
  * @param prefix prefix of shell
  * @param welcome 
+ * @param log_level_mask 
  */
 void ezcsl_init(const char *prefix,const char *welcome)
 {
@@ -109,6 +114,7 @@ void ezcsl_init(const char *prefix,const char *welcome)
     ezhdl.bufl = 0;
     ezhdl.historyp = 0;
     ezhdl.rb = ezrb_create();
+    ezcsl_log_level_set(LOG_LEVEL_ALL);
     Ez_CmdUnit_t *unit = ezcsl_cmd_unit_create("?","help",ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,"");
     ezport_send_str((char*)welcome,estrlen(welcome)); 
@@ -127,6 +133,25 @@ void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg)
     ezhdl.modem_prefix = modem_prefix;
     ezhdl.modem_cfg = cfg;
 }
+
+/**
+ * @brief set loglevel
+ * 
+ * @param mask 
+ */
+void ezcsl_log_level_set(ez_log_level_mask_t mask){
+    ezhdl.log_level_mask = mask;
+}
+
+/**
+ * @brief log level get
+ * 
+ * @return ez_log_level_mask_t 
+ */
+ezuint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask){
+    return (ezhdl.log_level_mask & mask);
+}
+
 
 /**
  * @brief deinit
@@ -303,6 +328,10 @@ void ezcsl_printf(const char *fmt, ...){
     UNLOCK();
 }
 
+
+void ezcsl_log(){
+
+}
 
 
 /**
