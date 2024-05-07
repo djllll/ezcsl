@@ -1,3 +1,4 @@
+#ifdef EZ_XMODEM
 #ifndef _EZXMODEM_H_
 #define _EZXMODEM_H_
 
@@ -24,4 +25,5 @@ typedef struct{
 
 extern xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg);
 
+#endif
 #endif

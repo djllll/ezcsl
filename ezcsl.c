@@ -47,9 +47,10 @@ static struct EzCslHandleStruct {
     ez_log_level_mask_t log_level_mask;
 
     /* xmodem */
+#ifdef EZ_XMODEM
     const char *modem_prefix;
     xmodem_cfg_t *modem_cfg;
-
+#endif
     /* sudo */
     const char *sudo_psw;
     uint8_t sudo_checked;
@@ -67,7 +68,9 @@ void ezport_receive_a_char(char c);
 void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 void ezcsl_log_level_set(ez_log_level_mask_t mask);
 uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
+#ifdef EZ_XMODEM
 void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
+#endif
 void ezcsl_deinit(void);
 uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
@@ -138,7 +141,9 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
 {
+#ifdef EZ_XMODEM
     ezhdl.modem_prefix = NULL;
+#endif
     ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
     ezhdl.prefix = prefix;
     ezhdl.bufp = 0;
@@ -156,7 +161,7 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezcsl_reset_prefix();
 }
 
-
+#ifdef EZ_XMODEM
 /**
  * @brief modem init (optional),if you need xmodem,call this after `ezcsl_init`
  *
@@ -167,6 +172,7 @@ void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg)
     ezhdl.modem_prefix = modem_prefix;
     ezhdl.modem_cfg = cfg;
 }
+#endif
 
 /**
  * @brief set loglevel

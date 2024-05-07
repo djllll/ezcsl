@@ -1,7 +1,8 @@
+#ifdef EZ_XMODEM
 #include "ezxmodem.h"
 #include "stdlib.h"
-
 #include "stdio.h"
+
 #define XM_SOH 0x01
 #define XM_EOT 0x04
 #define XM_ACK 0x06
@@ -108,3 +109,5 @@ xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg)
     }
     return X_TRANS_OK;
 }
+
+#endif

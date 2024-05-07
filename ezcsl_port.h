@@ -22,4 +22,6 @@ extern void ezport_receive_a_char(char c);
 
 #define LOG_DEFINE     LOG_LEVEL_ALL  //log level define 
 
+// #define EZ_XMODEM
+
 #endif
