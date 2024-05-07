@@ -25,6 +25,7 @@ typedef struct CmdUnitObj{
     const char *describe;
     void (*callback)(ezuint16_t ,ez_param_t*);
     struct CmdUnitObj *next;
+    ezuint8_t need_sudo;
 }ez_cmd_unit_t;
 
 typedef struct CmdObj{
@@ -39,7 +40,7 @@ typedef struct CmdObj{
 
 
 
-extern void ezcsl_init(const char *prefix,const char *welcome);
+extern void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 extern void ezcsl_deinit(void); 
 extern void ezcsl_log_level_set(ez_log_level_mask_t mask);
 extern ezuint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
@@ -47,7 +48,7 @@ extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 extern ezuint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
 
-extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(ezuint16_t,ez_param_t* ));
+extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,ezuint8_t need_sudo, void (*callback)(ezuint16_t,ez_param_t*));
 extern ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, ezuint16_t id, const char *title_sub, const char *describe, const char* para_desc);
 extern void ezport_send_str(char *str, ezuint16_t len);
 extern void ezcsl_printf(const char *fmt, ...);
