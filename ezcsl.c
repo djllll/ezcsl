@@ -465,7 +465,7 @@ static void ezcsl_submit(void)
     while (cmd_p != NULL) {
         if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
             match_ok_flag = 1;
-            if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked) {
+            if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw!=NULL) {
                 /* query sudo password */
                 ezcsl_printf("Please Input Sudo Password :\r\n");
                 ezcsl_reset_empty();
