@@ -4,7 +4,7 @@
 #include "stdio.h"
 /* your include end */
 
-void ezport_send_str(char *str, ezuint16_t len);
+void ezport_send_str(char *str, uint16_t len);
 
 
 
@@ -15,7 +15,7 @@ void ezport_send_str(char *str, ezuint16_t len);
  * @param len the length of the str
  * @author Jinlin Deng
  */
-void ezport_send_str(char *str, ezuint16_t len)
+void ezport_send_str(char *str, uint16_t len)
 {
     /** Write your code here ↓↓↓↓ */
     for (int i = 0; i < len; i++) {

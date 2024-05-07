@@ -12,13 +12,13 @@
 
 
 xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg);
-static ezuint16_t crc16_xmodem(ezuint8_t *data, ezuint16_t length);
+static uint16_t crc16_xmodem(uint8_t *data, uint16_t length);
 
 
-static ezuint16_t crc16_xmodem(ezuint8_t *data, ezuint16_t length)
+static uint16_t crc16_xmodem(uint8_t *data, uint16_t length)
 {
-    ezuint8_t i;
-    ezuint16_t crc = 0;            // Initial value
+    uint8_t i;
+    uint16_t crc = 0;            // Initial value
     while(length--)
     {
         crc ^= (uint16_t)(*data++) << 8; // crc ^= (uint16_t)(*data)<<8; data++;
@@ -43,12 +43,12 @@ static ezuint16_t crc16_xmodem(ezuint8_t *data, ezuint16_t length)
  */
 xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg)
 {
-    static ezuint8_t wait_final_eot = 0;
-    ezuint8_t buf[XMODEM_BUF_LEN];
-    ezuint8_t bufp = 0;
-    ezuint8_t sendbuf;
-    ezuint16_t timeout = 0;
-    ezuint8_t last_packet_num = 0;
+    static uint8_t wait_final_eot = 0;
+    uint8_t buf[XMODEM_BUF_LEN];
+    uint8_t bufp = 0;
+    uint8_t sendbuf;
+    uint16_t timeout = 0;
+    uint8_t last_packet_num = 0;
     sendbuf = XM_C;
     ezport_send_str(&sendbuf, 1);
 
@@ -63,7 +63,7 @@ xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg)
             timeout = 0;
             bufp++;
             if (bufp == 133) { // frame size
-                if (buf[0] == XM_SOH && buf[1] == (ezuint8_t)(last_packet_num + 1) && buf[1] == (~buf[2])) {
+                if (buf[0] == XM_SOH && buf[1] == (uint8_t)(last_packet_num + 1) && buf[1] == (~buf[2])) {
                     if (crc16_xmodem(buf, 3 + 128) == ((buf[131] << 8) | buf[132])) {
                         bufp = 0;
                         switch (cfg->frame_cb(buf + 3)) {

@@ -19,7 +19,7 @@ typedef enum{
 
 typedef struct{
     xmodem_rev_func_t (*frame_cb)(char *);
-    void (*delay_ms)(ezuint16_t );
+    void (*delay_ms)(uint16_t );
 }xmodem_cfg_t;
 
 extern xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg);

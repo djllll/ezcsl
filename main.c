@@ -25,7 +25,7 @@
 #define ECHO_ONE_ID 1
 #define ECHO_MUL_ID 2
 
-void test_cmd_callback(ezuint16_t id, ez_param_t* para)
+void test_cmd_callback(uint16_t id, ez_param_t* para)
 {
     switch (id) {
     case TEST_ADD2_ID: 
@@ -38,7 +38,7 @@ void test_cmd_callback(ezuint16_t id, ez_param_t* para)
         break;
     }
 }
-void echo_cmd_callback(ezuint16_t id,ez_param_t* para){
+void echo_cmd_callback(uint16_t id,ez_param_t* para){
     switch (id)
     {
     case ECHO_NONE_ID:
@@ -68,7 +68,7 @@ void echo_cmd_callback(ezuint16_t id,ez_param_t* para){
 //     return X_SEND_NEXT;
 // }
 
-// static void xmodem_delay_ms(ezuint16_t ms)
+// static void xmodem_delay_ms(uint16_t ms)
 // {
 //     for (int i = 0; i < 10000; i++) {
 //         for (int j = 0; j < 1000; j++) {
