@@ -13,7 +13,7 @@
 #define EZ_PtoF(param) (*(float*)(param))       //ez_param_t => float
 #define ez_param_t      void*
 
-
+typedef ezuint8_t ez_log_level_mask_t;
 
 typedef enum{
     EZ_OK=0,
@@ -25,7 +25,7 @@ typedef struct CmdUnitObj{
     const char *describe;
     void (*callback)(ezuint16_t ,ez_param_t*);
     struct CmdUnitObj *next;
-}Ez_CmdUnit_t;
+}ez_cmd_unit_t;
 
 typedef struct CmdObj{
     struct CmdUnitObj *unit;
@@ -35,15 +35,8 @@ typedef struct CmdObj{
     ezuint8_t para_num;
     const char *para_desc;
     struct CmdObj *next;
-}Ez_Cmd_t;
+}ez_cmd_t;
 
-typedef ezuint8_t ez_log_level_mask_t;
-#define LOG_LEVEL_V    0x01
-#define LOG_LEVEL_E    0x02
-#define LOG_LEVEL_I    0x04
-#define LOG_LEVEL_D    0x08
-#define LOG_LEVEL_ALL  0xff
-#define LOG_LEVEL_NONE 0x00
 
 
 extern void ezcsl_init(const char *prefix,const char *welcome);
@@ -54,8 +47,8 @@ extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 extern ezuint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
 
-extern Ez_CmdUnit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(ezuint16_t,ez_param_t* ));
-extern ez_sta_t ezcsl_cmd_register(Ez_CmdUnit_t *unit, ezuint16_t id, const char *title_sub, const char *describe, const char* para_desc);
+extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,void (*callback)(ezuint16_t,ez_param_t* ));
+extern ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, ezuint16_t id, const char *title_sub, const char *describe, const char* para_desc);
 extern void ezport_send_str(char *str, ezuint16_t len);
 extern void ezcsl_printf(const char *fmt, ...);
 
@@ -85,27 +78,59 @@ extern void ezcsl_printf(const char *fmt, ...);
 #define COLOR_L_WHITE(s)    	"\033[1;37m"s"\033[0m"
 
 
-
-
+#if (LOG_DEFINE & LOG_LEVEL_E)
 #define EZ_LOGE(TAG, format, ...)                                                                \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_E)) {                                                    \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_E)) {                                                  \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_RED("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                    \
     }
+#else
+#define EZ_LOGE(TAG, format, ...) \
+    {                             \
+        ;                         \
+    }
+#endif
+
+
+#if (LOG_DEFINE & LOG_LEVEL_I)
 #define EZ_LOGI(TAG, format, ...)                                                                  \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_I)) {                                                      \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_I)) {                                                    \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_GREEN("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                      \
     }
+#else
+#define EZ_LOGI(TAG, format, ...) \
+    {                             \
+        ;                         \
+    }
+#endif
+
+
+#if (LOG_DEFINE & LOG_LEVEL_D)
 #define EZ_LOGD(TAG, format, ...)                                                                 \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_D)) {                                                     \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_D)) {                                                   \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_BLUE("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                     \
     }
-#define EZ_LOG(TAG, format, ...)                                                    \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_V)) {                                       \
+#else
+#define EZ_LOGD(TAG, format, ...) \
+    {                             \
+        ;                         \
+    }
+#endif
+
+#if (LOG_DEFINE & LOG_LEVEL_V)
+#define EZ_LOGV(TAG, format, ...)                                                   \
+    if (ezcsl_log_level_allowed(LOG_LEVEL_V)) {                                     \
         ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                       \
     }
+#else
+#define EZ_LOGV(TAG, format, ...) \
+    {                             \
+        ;                         \
+    }
+#endif
+
 
 #endif
