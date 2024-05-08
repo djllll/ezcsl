@@ -1,6 +1,10 @@
 #ifndef _EZSTRING_H_
 #define _EZSTRING_H_
 
+#ifdef __cplusplus 
+extern "C" { 
+#endif 
+
 #define EZSTR_OK 0
 #define EZSTR_ERR 1
 
@@ -16,4 +20,7 @@ extern ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2);
 extern ezstr_ret_t estrncmp(const char *_Str1, const char *_Str2, ezstr_size_t _Size);
 extern char* estrtokc(char *_Str, char _Deli);
 
+#ifdef __cplusplus 
+} 
+#endif 
 #endif

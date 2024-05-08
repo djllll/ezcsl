@@ -2,9 +2,9 @@
 #include "malloc.h"
 
 ezrb_t *ezrb_create(void);
-rb_sta_t ezrb_push(ezrb_t *buffer,RB_DATA_T dat);
-rb_sta_t ezrb_pop(ezrb_t *buffer,RB_DATA_T *dat);
-void ezrb_destroy(ezrb_t *buffer);
+rb_sta_t ezrb_push(ezrb_t *cb,RB_DATA_T dat);
+rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *dat);
+void ezrb_destroy(ezrb_t *cb);
 
 /**
  * create a ringbuffer
@@ -26,7 +26,10 @@ ezrb_t * ezrb_create(void)
  * @param  data :the data
  * @author Jinlin Deng
  */  
-rb_sta_t ezrb_push(ezrb_t *cb, RB_DATA_T data) {  
+rb_sta_t ezrb_push(ezrb_t *cb, RB_DATA_T data) { 
+    if(cb==NULL){
+        return RB_ERR;
+    } 
     // buffer is full?  
     if (MOD_BUFLEN(cb->tail + 1) == cb->head) {  
         return RB_FULL;  
@@ -43,6 +46,9 @@ rb_sta_t ezrb_push(ezrb_t *cb, RB_DATA_T data) {
  * @author Jinlin Deng
  */  
 rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *rev) {  
+    if(cb==NULL){
+        return RB_ERR;
+    } 
     // buffer is empty ?
     if (cb->head == cb->tail) {  
         return RB_EMPTY;  
@@ -54,10 +60,10 @@ rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *rev) {
     return RB_OK;  
 }  
 
-void ezrb_destroy(ezrb_t *buffer)
+void ezrb_destroy(ezrb_t *cb)
 {
-   if(buffer!=NULL){
-    free(buffer);
-    buffer=NULL;
+   if(cb!=NULL){
+    free(cb);
+    cb=NULL;
    }
 }

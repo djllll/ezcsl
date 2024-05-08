@@ -1,27 +1,13 @@
 #include "ezcsl.h"
 #include <stdio.h>
+#include <unistd.h>
 
-
-#define WINDOWS_INPUT 
-
-#ifdef WINDOWS_INPUT
+#ifdef _WIN32
 #include <conio.h>
-#else
-
-#define INPUT_CMD_MANUALLY(cmd)                \
-    do {                                   \
-        char *tmp = (char *)cmd;           \
-        while (*tmp != 0) {                \
-            ezport_receive_a_char(*tmp++); \
-            ezcsl_tick();                  \
-        }                                  \
-        ezport_receive_a_char(ENTER_KV);   \
-        ezcsl_tick();                      \
-    } while (0)
+#elif defined(__linux__)
+#include "stdlib.h"
 #endif
 
-// put it in your receiver
-extern void ezport_receive_a_char(char c);
 
 #define WELCOME \
 "\033[36m    ______      ______                       __\r\n\
@@ -34,59 +20,103 @@ extern void ezport_receive_a_char(char c);
 
 #define TEST_ADD2_ID 0
 #define TEST_ADD3_ID 1
-#define TEST_MUL_ID 0
 
-void test_cmd_callback(ezuint16_t id, ez_param_t* para)
+#define ECHO_NONE_ID 0
+#define ECHO_ONE_ID 1
+#define ECHO_MUL_ID 2
+
+void test_cmd_callback(uint16_t id, ez_param_t* para)
 {
     switch (id) {
     case TEST_ADD2_ID: 
-        ezcsl_send_printf("result is %d\r\n",  EZ_PtoI(para[0]) +EZ_PtoI(para[1]));
+        ezcsl_printf("result is %d\r\n",  EZ_PtoI(para[0]) +EZ_PtoI(para[1]));
         break;
     case TEST_ADD3_ID:
-        ezcsl_send_printf("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
+        ezcsl_printf("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
         break;
     default:
         break;
     }
 }
-void test_auto_callback(ezuint16_t id,ez_param_t* para){
+void echo_cmd_callback(uint16_t id,ez_param_t* para){
     switch (id)
     {
-    case TEST_MUL_ID:
-        ezcsl_send_printf("your input s:%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
+    case ECHO_NONE_ID:
+        EZ_LOGE("test","your input is none ");
         break;
-    
+    case ECHO_ONE_ID:
+        ezcsl_printf("your input :%d\r\n", EZ_PtoI(para[0]));
+        break;
+    case ECHO_MUL_ID:
+        ezcsl_printf("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]) ,EZ_PtoF(para[1]) , EZ_PtoI(para[2]));
+        break;
     default:
         break;
     }
     return ;
 }
 
+// static xmodem_rev_func_t xmodem_rev_frame_cb(char *rev){
+//     printf("get");
+//     if(rev!=NULL){
+//         for(int i=0;i<128;i++){
+//             printf("%02x ",rev[i]);
+//         }
+//     }else{
+//         printf("finish");
+//     }
+//     return X_SEND_NEXT;
+// }
+
+// static void xmodem_delay_ms(uint16_t ms)
+// {
+//     for (int i = 0; i < 10000; i++) {
+//         for (int j = 0; j < 1000; j++) {
+//         }
+//     }
+// }
+
+// static xmodem_cfg_t xmodem_cfg = {
+//     .delay_ms = xmodem_delay_ms,
+//     .frame_cb = xmodem_rev_frame_cb
+// } ;
 
 int main(void)
 {
     /* init */
-    ezcsl_init("\033[36mTEST:\033[m ",WELCOME);
-    
-    /* add cmd */
-    Ez_CmdUnit_t *testunit = ezcsl_cmd_unit_create("test", "add test callback",test_cmd_callback);
-    ezcsl_cmd_register(testunit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(testunit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
+    ezcsl_init("\033[36mTEST:\033[m ",WELCOME,"123");
+    EZ_LOGI("EzCsl","init ok");
 
-    Ez_CmdUnit_t *testautocomplete = ezcsl_cmd_unit_create("echo", "echo your input",test_auto_callback);
-    ezcsl_cmd_register(testautocomplete, TEST_MUL_ID, "test", "input 'sfi'","sfi");
+
+    // ezcsl_xmodem_set("rx",&xmodem_cfg);
+
+
+    /* add cmd */
+    ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback",0,test_cmd_callback);
+    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
+    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
+
+    ez_cmd_unit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input",1,echo_cmd_callback);
+    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ","");
+    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'i'","i");
+    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'sfi'","sfi");
 
     /* input */
-#ifdef WINDOWS_INPUT
     char c;
     do {
+        #ifdef _WIN32
         c = getch();
+        #elif defined(__linux__)
+        system("stty raw -echo");
+        c = getchar();
+        system("stty cooked echo");
+        #else
+        print('others platform')
+        return 0;
+        #endif
         ezport_receive_a_char(c);
-        ezcsl_tick();
-    } while (c!=0x1b); //esc
-#else 
-    INPUT_CMD_MANUALLY("test,add2,1,2");
-#endif
+    } while (!ezcsl_tick()); //quit
+
 
     /* deinit */
     ezcsl_deinit();
