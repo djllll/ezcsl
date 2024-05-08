@@ -1,6 +1,10 @@
 #ifndef _EZCSL_PORT_H_
 #define _EZCSL_PORT_H_
 
+#ifdef __cplusplus 
+extern "C" { 
+#endif 
+
 typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 
@@ -23,5 +27,9 @@ extern void ezport_receive_a_char(char c);
 #define LOG_DEFINE     LOG_LEVEL_ALL  //log level define 
 
 // #define EZ_XMODEM
+
+#ifdef __cplusplus 
+}
+#endif 
 
 #endif

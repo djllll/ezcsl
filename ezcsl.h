@@ -6,7 +6,9 @@
 #include "ezcsl_port.h"
 #include "ezxmodem.h"
 
-
+#ifdef __cplusplus 
+extern "C" { 
+#endif 
 
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
 #define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
@@ -135,5 +137,9 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
+
+#ifdef __cplusplus 
+}
+#endif 
 
 #endif

@@ -3,6 +3,10 @@
 
 #include "stdint.h"
 
+#ifdef __cplusplus 
+extern "C" { 
+#endif 
+
 #define RB_BUF_LEN 32
 #define MOD_BUFLEN(x) ((x)&31)
 #define RB_DATA_T unsigned char
@@ -24,4 +28,9 @@ extern ezrb_t *ezrb_create(void);
 extern rb_sta_t ezrb_push(ezrb_t *cb,RB_DATA_T dat);
 extern rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *dat);
 extern void ezrb_destroy(ezrb_t *cb);
+
+#ifdef __cplusplus 
+}
+#endif 
+
 #endif

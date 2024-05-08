@@ -6,6 +6,10 @@
 
 #include "ezrb.h"
 
+#ifdef __cplusplus 
+extern "C" { 
+#endif 
+
 typedef enum{
     X_SEND_NEXT = 0,
     X_SEND_REPEAT,
@@ -24,6 +28,10 @@ typedef struct{
 }xmodem_cfg_t;
 
 extern xmodem_rev_trans_t xmodem_start(ezrb_t *rb, xmodem_cfg_t *cfg);
+
+#ifdef __cplusplus 
+}
+#endif 
 
 #endif
 #endif
