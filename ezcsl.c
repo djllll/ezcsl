@@ -403,7 +403,7 @@ void ezcsl_printf(const char *fmt, ...){
  */
 static void ezcsl_submit(void)
 {
-    //TODO XMODEM
+#ifdef EZ_XMODEM
     // if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
     //     if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
     //         if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){
@@ -414,6 +414,7 @@ static void ezcsl_submit(void)
     //         return;
     //     }
     // }
+#endif
     uint8_t paranum=0;
     float paraF[PARA_LEN_MAX];
     int paraI[PARA_LEN_MAX];
