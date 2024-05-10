@@ -22,7 +22,7 @@ ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
     char *tmp = _Dst;
     while (*tmp != 0) {
         EZSTR_OVERFLOW(s, _DstSize);
-        *tmp = *(tmp + 1);
+        (void)*tmp++;
     }
     while (*_Src != 0) {
         EZSTR_OVERFLOW(s, _DstSize);
@@ -37,7 +37,7 @@ ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src)
     char *tmp = _Dst;
     while (*tmp != 0) {
         EZSTR_OVERFLOW(s, _DstSize);
-        *tmp = *(tmp + 1);
+        (void)*tmp++;
     }
     if(s+1>=_DstSize){
         return EZSTR_ERR;

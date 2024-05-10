@@ -47,7 +47,7 @@ static struct EzCslHandleStruct {
     ez_log_level_mask_t log_level_mask;
 
     /* xmodem */
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     const char *modem_prefix;
     xmodem_cfg_t *modem_cfg;
 #endif
@@ -58,7 +58,7 @@ static struct EzCslHandleStruct {
 } ezhdl;
 
 
-#define LOCK() do{while(ezhdl.lock!=0);ezhdl.lock=1;}while(0)
+#define LOCK() do{while(ezhdl.lock!=0){LOCK_WAIT_DELAY();};ezhdl.lock=1;}while(0)
 #define UNLOCK() do{ezhdl.lock=0;}while(0)
 
 
@@ -68,7 +68,7 @@ void ezport_receive_a_char(char c);
 void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 void ezcsl_log_level_set(ez_log_level_mask_t mask);
 uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 #endif
 void ezcsl_deinit(void);
@@ -141,7 +141,7 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
 {
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     ezhdl.modem_prefix = NULL;
 #endif
     ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
@@ -161,7 +161,7 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezcsl_reset_prefix();
 }
 
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 /**
  * @brief modem init (optional),if you need xmodem,call this after `ezcsl_init`
  *
@@ -403,7 +403,7 @@ void ezcsl_printf(const char *fmt, ...){
  */
 static void ezcsl_submit(void)
 {
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     // if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
     //     if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
     //         if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){

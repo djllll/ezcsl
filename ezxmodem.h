@@ -1,4 +1,4 @@
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 #ifndef _EZXMODEM_H_
 #define _EZXMODEM_H_
 
