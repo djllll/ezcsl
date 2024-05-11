@@ -22,6 +22,10 @@ Ezcsl is a console programming by C ,that can be used for MCU terminal simulatio
 |HISTORY_LEN     |Maximum number of history records|        
 |PRINT_BUF_LEN   |Printf buffer size|
 |PARA_LEN_MAX    |Maximum number of parameters|
+|SPLIT_CHAR    |Split Character|
+|LOG_DEFINE    |Enable/Disable log level by macro|
+|LOCK_WAIT_DELAY()    |When EzCsl is in Multi-threadings , `LOCK_WAIT_DELAY()` to make self suspend|
+|USE_EZ_XMODEM    |Comment it to disable XMODEM|
 
 
 # Example 
