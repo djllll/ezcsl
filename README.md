@@ -1,5 +1,5 @@
 # EzCsl
-Ezcsl is a console programming by C ,that can be used for MCU terminal simulation
+Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU terminal simulation
 
 ## Migration
 1. copy `ez*.c/h` to your project;
