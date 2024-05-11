@@ -1,5 +1,5 @@
 #include "ezrb.h"
-#include "malloc.h"
+#include "stdlib.h"
 
 ezrb_t *ezrb_create(void);
 rb_sta_t ezrb_push(ezrb_t *cb,RB_DATA_T dat);
