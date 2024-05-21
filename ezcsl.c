@@ -18,10 +18,7 @@
 const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
 
-typedef struct CmdHistory{
-    char buf[CSL_BUF_LEN];
-    struct CmdHistory *next;
-}cmd_history_t;
+
 
 
 static struct EzCslHandleStruct {
@@ -35,8 +32,9 @@ static struct EzCslHandleStruct {
     uint16_t bufl;
 
     /* history */
-    cmd_history_t *history;
-    cmd_history_t *cur_history;
+    char hist_buf[HISTORY_BUF_LEN];
+    uint8_t cur_hist_idx;
+    uint16_t hist_buf_rest;
 
     /* ringbuffer */
     ezrb_t *rb;
@@ -81,7 +79,7 @@ static void ezcsl_reset_empty(void);
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
 static void buf_to_history(void);
-static void load_history(void);
+static uint8_t load_history(void);
 static void last_history_to_buf(void);
 static void next_history_to_buf(void);
 
@@ -148,19 +146,17 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezhdl.bufp = 0;
     ezhdl.bufl = 0;
 
-    ezhdl.history = NULL;
+    ezhdl.cur_hist_idx = 0;
+    ezhdl.hist_buf_rest = HISTORY_BUF_LEN;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        ezhdl.hist_buf[i] = 0;
+    }
 
     ezhdl.sudo_psw = sudo_psw;
     ezhdl.psw_inputing = 0;
     ezhdl.sudo_checked = 0;
 
     ezhdl.rb = ezrb_create(CSL_BUF_LEN/2);
-
-    ezhdl.history = (cmd_history_t*)malloc(sizeof(cmd_history_t)*HISTORY_LEN);
-    for (uint16_t i = 0; i < HISTORY_LEN; i++) {
-        ezhdl.history[i].buf[0] = 0;
-        ezhdl.history[i].next = i == HISTORY_LEN - 1 ? NULL : &ezhdl.history[i + 1];
-    }
 
     ezcsl_log_level_set(LOG_LEVEL_ALL);
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?","help",0,ezcsl_cmd_help_callback);
@@ -219,9 +215,6 @@ void ezcsl_deinit(void){
         p2=p2->next;
         free(p_del);
     }
-    free(ezhdl.history);
-    ezhdl.history = NULL;
-    ezhdl.cur_history = NULL;
     ezrb_destroy(ezhdl.rb);
 }
 
@@ -716,68 +709,84 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
 }
 
 
+static char last_load_hist = 0; // ugly flag...
 /**
  * move the buf to history
- * @param  
+ * @param
  * @author Jinlin Deng
  */
 static void buf_to_history(void)
 {
-    if (HISTORY_LEN <= 0) {
-        return;
-    }
-    // set input as last, move last to first
-    cmd_history_t *p_last = ezhdl.history;
-    cmd_history_t *p_last_parent = ezhdl.history;
-    while (p_last != NULL) {
-        if (p_last->next == NULL) {
-            break;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        uint16_t idx = HISTORY_BUF_LEN - 1 - i;
+        if (idx > ezhdl.bufl) {
+            ezhdl.hist_buf[idx] = ezhdl.hist_buf[idx - ezhdl.bufl - 1];
+        } else if (idx < ezhdl.bufl) {
+            ezhdl.hist_buf[idx] = ezhdl.buf[idx];
+        } else {
+            ezhdl.hist_buf[idx] = 0;
         }
-        p_last_parent = p_last;
-        p_last = p_last->next;
     }
-    p_last_parent->next = NULL;
-    estrcpy_s(p_last->buf, CSL_BUF_LEN, ezhdl.buf);
-    p_last->next = ezhdl.history;
-    ezhdl.history = p_last;
-    ezhdl.cur_history = NULL;
+    ezhdl.cur_hist_idx = 0;
+    last_load_hist = 0;
 }
 
 
 /**
- * move history to buf  
+ * move history to buf
  * @author Jinlin Deng
  */
-static void load_history(void){
-    estrcpy_s(ezhdl.buf,CSL_BUF_LEN,ezhdl.cur_history->buf);
-    ezhdl.bufl=ezhdl.bufp=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
-    ezcsl_printf(MOVE_CURSOR_ABS(0)"%s%s"ERASE_TO_END(),ezhdl.prefix,ezhdl.buf);
-}
-static void last_history_to_buf(void){
-    if(ezhdl.cur_history==NULL){
-        if(ezhdl.history!=NULL){
-            ezhdl.cur_history=ezhdl.history;
-            load_history();
-        }
-    }else{
-        if(ezhdl.cur_history->next!=NULL){
-            ezhdl.cur_history=ezhdl.cur_history->next;
-            load_history();
-        }
-    }
-}
-static void next_history_to_buf(void){
-    if(ezhdl.cur_history==NULL){
-        return;
-    }else{
-        cmd_history_t *p=ezhdl.history;
-        while(p!=NULL){
-            if(p->next==ezhdl.cur_history){
-                ezhdl.cur_history=p;
-                load_history();
-                break;
+static uint8_t load_history(void)
+{
+    uint8_t hist_num = 0;
+    char *hist_start = ezhdl.hist_buf;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        if (ezhdl.hist_buf[i] == 0) {
+            if (hist_num == ezhdl.cur_hist_idx) {
+                estrcpy_s(ezhdl.buf, CSL_BUF_LEN, hist_start);
+                ezhdl.bufl = ezhdl.bufp = estrlen_s(ezhdl.buf, CSL_BUF_LEN);
+                ezcsl_printf(MOVE_CURSOR_ABS(0) "%s%s" ERASE_TO_END(), ezhdl.prefix, ezhdl.buf);
+                return 1;
+            } else {
+                if (ezhdl.hist_buf[i + 1] == 0) {
+                    return 0;
+                }
+                hist_start = &ezhdl.hist_buf[i + 1];
+                hist_num++;
             }
-            p=p->next;
         }
     }
+}
+
+
+/**
+ * @brief load last record
+ * 
+ */
+static void last_history_to_buf(void)
+{
+    if (last_load_hist == -1) {
+        ezhdl.cur_hist_idx++;
+    }
+    if (load_history()) {
+        last_load_hist = 1;
+        ezhdl.cur_hist_idx++;
+    }
+}
+
+/**
+ * @brief load next record
+ * 
+ */
+static void next_history_to_buf(void)
+{
+
+    if (ezhdl.cur_hist_idx > 0) {
+        if (last_load_hist == 1) {
+            ezhdl.cur_hist_idx--;
+        }
+        ezhdl.cur_hist_idx--;
+    }
+    load_history();
+    last_load_hist = -1;
 }
