@@ -2,7 +2,7 @@
 #include "ezstring.h"
 #include <stddef.h>
 
-#define overflow(s, lmt) \
+#define EZSTR_OVERFLOW(s, lmt) \
     if (++s >= lmt)      \
         return EZSTR_ERR;
 
@@ -21,11 +21,11 @@ ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
     ezstr_size_t s = 0;
     char *tmp = _Dst;
     while (*tmp != 0) {
-        overflow(s, _DstSize);
-        *tmp++;
+        EZSTR_OVERFLOW(s, _DstSize);
+        (void)*tmp++;
     }
     while (*_Src != 0) {
-        overflow(s, _DstSize);
+        EZSTR_OVERFLOW(s, _DstSize);
         *tmp++ = *_Src++;
     }
     *tmp = 0;
@@ -36,8 +36,8 @@ ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src)
     ezstr_size_t s = 0;
     char *tmp = _Dst;
     while (*tmp != 0) {
-        overflow(s, _DstSize);
-        *tmp++;
+        EZSTR_OVERFLOW(s, _DstSize);
+        (void)*tmp++;
     }
     if(s+1>=_DstSize){
         return EZSTR_ERR;
@@ -51,7 +51,7 @@ ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
 {
     ezstr_size_t s = 0;
     while (*_Src != 0) {
-        overflow(s, _DstSize);
+        EZSTR_OVERFLOW(s, _DstSize);
         *_Dst++ = *_Src++;
     }
     *_Dst=0;

@@ -1,4 +1,4 @@
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 #include "ezxmodem.h"
 #include "stdlib.h"
 #include "stdio.h"

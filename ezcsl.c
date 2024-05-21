@@ -18,10 +18,7 @@
 const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
 
-typedef struct CmdHistory{
-    char history[CSL_BUF_LEN];
-    struct CmdHistory *next;
-}cmd_history_t;
+
 
 
 static struct EzCslHandleStruct {
@@ -35,7 +32,9 @@ static struct EzCslHandleStruct {
     uint16_t bufl;
 
     /* history */
-    uint8_t historyp;
+    char hist_buf[HISTORY_BUF_LEN];
+    uint8_t cur_hist_idx;
+    uint16_t hist_buf_rest;
 
     /* ringbuffer */
     ezrb_t *rb;
@@ -47,7 +46,7 @@ static struct EzCslHandleStruct {
     ez_log_level_mask_t log_level_mask;
 
     /* xmodem */
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     const char *modem_prefix;
     xmodem_cfg_t *modem_cfg;
 #endif
@@ -58,7 +57,7 @@ static struct EzCslHandleStruct {
 } ezhdl;
 
 
-#define LOCK() do{while(ezhdl.lock!=0);ezhdl.lock=1;}while(0)
+#define LOCK() do{while(ezhdl.lock!=0){LOCK_WAIT_DELAY();};ezhdl.lock=1;}while(0)
 #define UNLOCK() do{ezhdl.lock=0;}while(0)
 
 
@@ -68,7 +67,7 @@ void ezport_receive_a_char(char c);
 void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 void ezcsl_log_level_set(ez_log_level_mask_t mask);
 uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 #endif
 void ezcsl_deinit(void);
@@ -79,10 +78,8 @@ void ezcsl_printf(const char *fmt, ...);
 static void ezcsl_reset_empty(void);
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
-static cmd_history_t *history_head=NULL;
-static cmd_history_t *cur_history=NULL;
 static void buf_to_history(void);
-static void load_history(void);
+static uint8_t load_history(void);
 static void last_history_to_buf(void);
 static void next_history_to_buf(void);
 
@@ -137,22 +134,30 @@ void ezport_receive_a_char(char c)
  * 
  * @param prefix prefix of shell
  * @param welcome 
- * @param sudo_psw password of sudo  
+ * @param sudo_psw password of sudo, NULL = no sudo  
  */
 void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
 {
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     ezhdl.modem_prefix = NULL;
 #endif
     ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
     ezhdl.prefix = prefix;
     ezhdl.bufp = 0;
     ezhdl.bufl = 0;
-    ezhdl.historyp = 0;
+
+    ezhdl.cur_hist_idx = 0;
+    ezhdl.hist_buf_rest = HISTORY_BUF_LEN;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        ezhdl.hist_buf[i] = 0;
+    }
+
     ezhdl.sudo_psw = sudo_psw;
     ezhdl.psw_inputing = 0;
     ezhdl.sudo_checked = 0;
-    ezhdl.rb = ezrb_create();
+
+    ezhdl.rb = ezrb_create(CSL_BUF_LEN/2);
+
     ezcsl_log_level_set(LOG_LEVEL_ALL);
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?","help",0,ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,"");
@@ -161,7 +166,7 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezcsl_reset_prefix();
 }
 
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 /**
  * @brief modem init (optional),if you need xmodem,call this after `ezcsl_init`
  *
@@ -208,12 +213,6 @@ void ezcsl_deinit(void){
     while(p2!=NULL){
         ez_cmd_unit_t *p_del=p2;
         p2=p2->next;
-        free(p_del);
-    }
-    cmd_history_t *p3 =history_head;
-    while(p3!=NULL){
-        cmd_history_t *p_del=p3;
-        p3=p3->next;
         free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
@@ -318,7 +317,7 @@ uint8_t ezcsl_tick(void) {
                 if (!ezhdl.psw_inputing) {
                     ezcsl_printf(CURSOR_BACK(1) SAVE_CURSOR_POS());
                 }
-                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
+                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl-1; i++) {
                     ezhdl.buf[i] = ezhdl.buf[i + 1];
                     if (!ezhdl.psw_inputing) {
                         ezport_send_str(ezhdl.buf + i, 1);
@@ -403,7 +402,7 @@ void ezcsl_printf(const char *fmt, ...){
  */
 static void ezcsl_submit(void)
 {
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
     // if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
     //     if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
     //         if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){
@@ -427,7 +426,6 @@ static void ezcsl_submit(void)
     uint8_t split_cnt=0;
 
     buf_to_history();
-    cur_history=NULL;
 
     if (ezhdl.bufl > CSL_BUF_LEN - 1) {
         ezhdl.bufl = CSL_BUF_LEN - 1;
@@ -711,84 +709,84 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
 }
 
 
-
+static uint8_t last_load_hist = 0; // ugly flag...
 /**
  * move the buf to history
- * @param  
+ * @param
  * @author Jinlin Deng
  */
 static void buf_to_history(void)
 {
-    static uint8_t cur_history_len = 0;
-    if (HISTORY_LEN <= 0) {
-        return;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        uint16_t idx = HISTORY_BUF_LEN - 1 - i;
+        if (idx > ezhdl.bufl) {
+            ezhdl.hist_buf[idx] = ezhdl.hist_buf[idx - ezhdl.bufl - 1];
+        } else if (idx < ezhdl.bufl) {
+            ezhdl.hist_buf[idx] = ezhdl.buf[idx];
+        } else {
+            ezhdl.hist_buf[idx] = 0;
+        }
     }
-    if (history_head == NULL) {
-        cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-        estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
-        p_add->next=NULL;
-        history_head = p_add;
-        cur_history_len++;
-    } else {
-        if (cur_history_len < HISTORY_LEN) { // first insert
-            cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-            estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
-            p_add->next = history_head;
-            history_head = p_add;
-            cur_history_len++;
-        } else { // move last to first
-            cmd_history_t *p_last = history_head;
-            cmd_history_t *p_last_parent = history_head;
-            while (p_last != NULL) {
-                if (p_last->next == NULL) {
-                    break;
+    ezhdl.cur_hist_idx = 0;
+    last_load_hist = 0;
+}
+
+
+/**
+ * move history to buf
+ * @author Jinlin Deng
+ */
+static uint8_t load_history(void)
+{
+    uint8_t hist_num = 0;
+    char *hist_start = ezhdl.hist_buf;
+    for (uint16_t i = 0; i < HISTORY_BUF_LEN; i++) {
+        if (ezhdl.hist_buf[i] == 0) {
+            if (hist_num == ezhdl.cur_hist_idx) {
+                estrcpy_s(ezhdl.buf, CSL_BUF_LEN, hist_start);
+                ezhdl.bufl = ezhdl.bufp = estrlen_s(ezhdl.buf, CSL_BUF_LEN);
+                ezcsl_printf(MOVE_CURSOR_ABS(0) "%s%s" ERASE_TO_END(), ezhdl.prefix, ezhdl.buf);
+                return 1;
+            } else {
+                if (ezhdl.hist_buf[i + 1] == 0) {
+                    return 0;
                 }
-                p_last_parent = p_last;
-                p_last = p_last->next;
+                hist_start = &ezhdl.hist_buf[i + 1];
+                hist_num++;
             }
-            p_last_parent->next = NULL;
-            estrcpy_s(p_last->history,CSL_BUF_LEN, ezhdl.buf);
-            p_last->next = history_head;
-            history_head = p_last;
         }
     }
 }
 
 
 /**
- * move history to buf  
- * @author Jinlin Deng
+ * @brief load last record
+ * 
  */
-static void load_history(void){
-    estrcpy_s(ezhdl.buf,CSL_BUF_LEN,cur_history->history);
-    ezhdl.bufl=ezhdl.bufp=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
-    ezcsl_printf(MOVE_CURSOR_ABS(0)"%s%s"ERASE_TO_END(),ezhdl.prefix,ezhdl.buf);
-}
-static void last_history_to_buf(void){
-    if(cur_history==NULL){
-        if(history_head!=NULL){
-            cur_history=history_head;
-            load_history();
-        }
-    }else{
-        if(cur_history->next!=NULL){
-            cur_history=cur_history->next;
-            load_history();
-        }
+static void last_history_to_buf(void)
+{
+    if (last_load_hist == 2) {
+        ezhdl.cur_hist_idx++;
+    }
+    if (load_history()) {
+        last_load_hist = 1;
+        ezhdl.cur_hist_idx++;
     }
 }
-static void next_history_to_buf(void){
-    if(cur_history==NULL){
-        return;
-    }else{
-        cmd_history_t *p=history_head;
-        while(p!=NULL){
-            if(p->next==cur_history){
-                cur_history=p;
-                load_history();
-                break;
-            }
-            p=p->next;
+
+/**
+ * @brief load next record
+ * 
+ */
+static void next_history_to_buf(void)
+{
+
+    if (ezhdl.cur_hist_idx > 0) {
+        if (last_load_hist == 1) {
+            ezhdl.cur_hist_idx--;
         }
+        ezhdl.cur_hist_idx--;
     }
+    load_history();
+    last_load_hist = 2;
 }

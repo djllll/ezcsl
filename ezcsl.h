@@ -46,7 +46,7 @@ extern void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_
 extern void ezcsl_deinit(void); 
 extern void ezcsl_log_level_set(ez_log_level_mask_t mask);
 extern uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
-#ifdef EZ_XMODEM
+#ifdef USE_EZ_XMODEM
 extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
 #endif
 extern uint8_t ezcsl_tick(void);
