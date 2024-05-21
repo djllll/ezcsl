@@ -84,7 +84,7 @@ void echo_cmd_callback(uint16_t id,ez_param_t* para){
 int main(void)
 {
     /* init */
-    ezcsl_init("\033[36mTEST:\033[m ",WELCOME,"123");
+    ezcsl_init("\033[36mTEST:\033[m ",WELCOME,NULL);
     EZ_LOGI("EzCsl","init ok");
 
 

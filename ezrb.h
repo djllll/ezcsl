@@ -7,8 +7,7 @@
 extern "C" { 
 #endif 
 
-#define RB_BUF_LEN 32
-#define MOD_BUFLEN(x) ((x)&31)
+
 #define RB_DATA_T unsigned char
 
 typedef enum{
@@ -19,12 +18,13 @@ typedef enum{
 }rb_sta_t;
 
 typedef struct {  
-    RB_DATA_T buffer[RB_BUF_LEN];  
-    int head;    
-    int tail;    
+    RB_DATA_T *buffer;  
+    uint8_t len;
+    uint8_t head;    
+    uint8_t tail;    
 } ezrb_t;  
 
-extern ezrb_t *ezrb_create(void);
+extern ezrb_t *ezrb_create(uint8_t len);
 extern rb_sta_t ezrb_push(ezrb_t *cb,RB_DATA_T dat);
 extern rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *dat);
 extern void ezrb_destroy(ezrb_t *cb);

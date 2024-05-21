@@ -19,7 +19,7 @@ const char* strNULL="";
 #define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
 
 typedef struct CmdHistory{
-    char history[CSL_BUF_LEN];
+    char buf[CSL_BUF_LEN];
     struct CmdHistory *next;
 }cmd_history_t;
 
@@ -35,7 +35,8 @@ static struct EzCslHandleStruct {
     uint16_t bufl;
 
     /* history */
-    uint8_t historyp;
+    cmd_history_t *history;
+    cmd_history_t *cur_history;
 
     /* ringbuffer */
     ezrb_t *rb;
@@ -79,8 +80,6 @@ void ezcsl_printf(const char *fmt, ...);
 static void ezcsl_reset_empty(void);
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
-static cmd_history_t *history_head=NULL;
-static cmd_history_t *cur_history=NULL;
 static void buf_to_history(void);
 static void load_history(void);
 static void last_history_to_buf(void);
@@ -137,7 +136,7 @@ void ezport_receive_a_char(char c)
  * 
  * @param prefix prefix of shell
  * @param welcome 
- * @param sudo_psw password of sudo  
+ * @param sudo_psw password of sudo, NULL = no sudo  
  */
 void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
 {
@@ -148,11 +147,21 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezhdl.prefix = prefix;
     ezhdl.bufp = 0;
     ezhdl.bufl = 0;
-    ezhdl.historyp = 0;
+
+    ezhdl.history = NULL;
+
     ezhdl.sudo_psw = sudo_psw;
     ezhdl.psw_inputing = 0;
     ezhdl.sudo_checked = 0;
-    ezhdl.rb = ezrb_create();
+
+    ezhdl.rb = ezrb_create(CSL_BUF_LEN/2);
+
+    ezhdl.history = (cmd_history_t*)malloc(sizeof(cmd_history_t)*HISTORY_LEN);
+    for (uint16_t i = 0; i < HISTORY_LEN; i++) {
+        ezhdl.history[i].buf[0] = 0;
+        ezhdl.history[i].next = i == HISTORY_LEN - 1 ? NULL : &ezhdl.history[i + 1];
+    }
+
     ezcsl_log_level_set(LOG_LEVEL_ALL);
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?","help",0,ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit,0,NULL,NULL,"");
@@ -210,12 +219,9 @@ void ezcsl_deinit(void){
         p2=p2->next;
         free(p_del);
     }
-    cmd_history_t *p3 =history_head;
-    while(p3!=NULL){
-        cmd_history_t *p_del=p3;
-        p3=p3->next;
-        free(p_del);
-    }
+    free(ezhdl.history);
+    ezhdl.history = NULL;
+    ezhdl.cur_history = NULL;
     ezrb_destroy(ezhdl.rb);
 }
 
@@ -318,7 +324,7 @@ uint8_t ezcsl_tick(void) {
                 if (!ezhdl.psw_inputing) {
                     ezcsl_printf(CURSOR_BACK(1) SAVE_CURSOR_POS());
                 }
-                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl; i++) {
+                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl-1; i++) {
                     ezhdl.buf[i] = ezhdl.buf[i + 1];
                     if (!ezhdl.psw_inputing) {
                         ezport_send_str(ezhdl.buf + i, 1);
@@ -427,7 +433,6 @@ static void ezcsl_submit(void)
     uint8_t split_cnt=0;
 
     buf_to_history();
-    cur_history=NULL;
 
     if (ezhdl.bufl > CSL_BUF_LEN - 1) {
         ezhdl.bufl = CSL_BUF_LEN - 1;
@@ -711,7 +716,6 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
 }
 
 
-
 /**
  * move the buf to history
  * @param  
@@ -719,39 +723,24 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
  */
 static void buf_to_history(void)
 {
-    static uint8_t cur_history_len = 0;
     if (HISTORY_LEN <= 0) {
         return;
     }
-    if (history_head == NULL) {
-        cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-        estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
-        p_add->next=NULL;
-        history_head = p_add;
-        cur_history_len++;
-    } else {
-        if (cur_history_len < HISTORY_LEN) { // first insert
-            cmd_history_t *p_add = (cmd_history_t *)malloc(sizeof(cmd_history_t));
-            estrcpy_s(p_add->history,CSL_BUF_LEN, ezhdl.buf);
-            p_add->next = history_head;
-            history_head = p_add;
-            cur_history_len++;
-        } else { // move last to first
-            cmd_history_t *p_last = history_head;
-            cmd_history_t *p_last_parent = history_head;
-            while (p_last != NULL) {
-                if (p_last->next == NULL) {
-                    break;
-                }
-                p_last_parent = p_last;
-                p_last = p_last->next;
-            }
-            p_last_parent->next = NULL;
-            estrcpy_s(p_last->history,CSL_BUF_LEN, ezhdl.buf);
-            p_last->next = history_head;
-            history_head = p_last;
+    // set input as last, move last to first
+    cmd_history_t *p_last = ezhdl.history;
+    cmd_history_t *p_last_parent = ezhdl.history;
+    while (p_last != NULL) {
+        if (p_last->next == NULL) {
+            break;
         }
+        p_last_parent = p_last;
+        p_last = p_last->next;
     }
+    p_last_parent->next = NULL;
+    estrcpy_s(p_last->buf, CSL_BUF_LEN, ezhdl.buf);
+    p_last->next = ezhdl.history;
+    ezhdl.history = p_last;
+    ezhdl.cur_history = NULL;
 }
 
 
@@ -760,31 +749,31 @@ static void buf_to_history(void)
  * @author Jinlin Deng
  */
 static void load_history(void){
-    estrcpy_s(ezhdl.buf,CSL_BUF_LEN,cur_history->history);
+    estrcpy_s(ezhdl.buf,CSL_BUF_LEN,ezhdl.cur_history->buf);
     ezhdl.bufl=ezhdl.bufp=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
     ezcsl_printf(MOVE_CURSOR_ABS(0)"%s%s"ERASE_TO_END(),ezhdl.prefix,ezhdl.buf);
 }
 static void last_history_to_buf(void){
-    if(cur_history==NULL){
-        if(history_head!=NULL){
-            cur_history=history_head;
+    if(ezhdl.cur_history==NULL){
+        if(ezhdl.history!=NULL){
+            ezhdl.cur_history=ezhdl.history;
             load_history();
         }
     }else{
-        if(cur_history->next!=NULL){
-            cur_history=cur_history->next;
+        if(ezhdl.cur_history->next!=NULL){
+            ezhdl.cur_history=ezhdl.cur_history->next;
             load_history();
         }
     }
 }
 static void next_history_to_buf(void){
-    if(cur_history==NULL){
+    if(ezhdl.cur_history==NULL){
         return;
     }else{
-        cmd_history_t *p=history_head;
+        cmd_history_t *p=ezhdl.history;
         while(p!=NULL){
-            if(p->next==cur_history){
-                cur_history=p;
+            if(p->next==ezhdl.cur_history){
+                ezhdl.cur_history=p;
                 load_history();
                 break;
             }
