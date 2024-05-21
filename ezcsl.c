@@ -709,7 +709,7 @@ static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
 }
 
 
-static char last_load_hist = 0; // ugly flag...
+static uint8_t last_load_hist = 0; // ugly flag...
 /**
  * move the buf to history
  * @param
@@ -765,7 +765,7 @@ static uint8_t load_history(void)
  */
 static void last_history_to_buf(void)
 {
-    if (last_load_hist == -1) {
+    if (last_load_hist == 2) {
         ezhdl.cur_hist_idx++;
     }
     if (load_history()) {
@@ -788,5 +788,5 @@ static void next_history_to_buf(void)
         ezhdl.cur_hist_idx--;
     }
     load_history();
-    last_load_hist = -1;
+    last_load_hist = 2;
 }
