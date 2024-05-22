@@ -756,6 +756,7 @@ static uint8_t load_history(void)
             }
         }
     }
+    return 0;
 }
 
 
@@ -781,12 +782,12 @@ static void last_history_to_buf(void)
 static void next_history_to_buf(void)
 {
 
-    if (ezhdl.cur_hist_idx > 0) {
-        if (last_load_hist == 1) {
-            ezhdl.cur_hist_idx--;
-        }
+    if (last_load_hist == 1 && ezhdl.cur_hist_idx > 0) {
         ezhdl.cur_hist_idx--;
     }
-    load_history();
-    last_load_hist = 2;
+    if (ezhdl.cur_hist_idx > 0) {
+        ezhdl.cur_hist_idx--;
+        load_history();
+        last_load_hist = 2;
+    }
 }
