@@ -4,7 +4,6 @@
 #include "stdarg.h"
 #include "ezstring.h"
 #include "ezcsl_port.h"
-#include "ezxmodem.h"
 
 #ifdef __cplusplus 
 extern "C" { 
@@ -41,14 +40,20 @@ typedef struct CmdObj{
 }ez_cmd_t;
 
 
+#ifdef USE_EZ_MODEM
+typedef enum{
+    M_SEND_NEXT = 0,
+    M_SEND_REPEAT,
+    M_SEND_ABORT
+}modem_rev_func_t;
+
+extern void ezcsl_modem_set(const char *modem_prefix,modem_rev_func_t (*cb_func)(char *));
+#endif
 
 extern void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 extern void ezcsl_deinit(void); 
 extern void ezcsl_log_level_set(ez_log_level_mask_t mask);
 extern uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
-#ifdef USE_EZ_XMODEM
-extern void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
-#endif
 extern uint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
 
@@ -136,6 +141,8 @@ extern void ezcsl_printf(const char *fmt, ...);
         ;                         \
     }
 #endif
+
+
 
 
 #ifdef __cplusplus 

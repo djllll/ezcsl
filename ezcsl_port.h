@@ -11,10 +11,11 @@ typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 
 extern void ezport_send_str(char *str, uint16_t len);
+extern void ezport_delay(uint16_t ms);
 extern void ezport_receive_a_char(char c);
 
-#define CSL_BUF_LEN     40  //console buf len (include prefix)
-#define HISTORY_BUF_LEN     20  //history record
+#define CSL_BUF_LEN     50  //console buf len (include prefix)
+#define HISTORY_BUF_LEN 40  //history record
 #define PRINT_BUF_LEN   150
 #define PARA_LEN_MAX    5
 #define SPLIT_CHAR      ',' 
@@ -22,9 +23,7 @@ extern void ezport_receive_a_char(char c);
 
 #define LOG_DEFINE     LOG_LEVEL_ALL  //log level define 
 
-#define LOCK_WAIT_DELAY()
-
-// #define USE_EZ_XMODEM
+#define USE_EZ_MODEM EZ_XMODEM_128
 
 #ifdef __cplusplus 
 }

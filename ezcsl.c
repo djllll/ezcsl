@@ -45,10 +45,12 @@ static struct EzCslHandleStruct {
     /* log */
     ez_log_level_mask_t log_level_mask;
 
-    /* xmodem */
-#ifdef USE_EZ_XMODEM
+    /* modem */
+#if USE_EZ_MODEM != 0
+    uint8_t modem_start_flag;
+    ezrb_t *modem_rb;
     const char *modem_prefix;
-    xmodem_cfg_t *modem_cfg;
+    modem_rev_func_t (*modem_cb)(char *);
 #endif
     /* sudo */
     const char *sudo_psw;
@@ -57,7 +59,7 @@ static struct EzCslHandleStruct {
 } ezhdl;
 
 
-#define LOCK() do{while(ezhdl.lock!=0){LOCK_WAIT_DELAY();};ezhdl.lock=1;}while(0)
+#define LOCK() do{while(ezhdl.lock!=0){ezport_delay(10);};ezhdl.lock=1;}while(0)
 #define UNLOCK() do{ezhdl.lock=0;}while(0)
 
 
@@ -67,14 +69,16 @@ void ezport_receive_a_char(char c);
 void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
 void ezcsl_log_level_set(ez_log_level_mask_t mask);
 uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
-#ifdef USE_EZ_XMODEM
-void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg);
-#endif
 void ezcsl_deinit(void);
 uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
 void ezcsl_printf(const char *fmt, ...);
-
+#if USE_EZ_MODEM != 0
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *));
+static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *));
+static uint16_t crc16_modem(uint8_t *data, uint16_t length);
+static void modem_reply(uint8_t reply);
+#endif
 static void ezcsl_reset_empty(void);
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
@@ -124,7 +128,7 @@ static void ezcsl_reset_empty(void)
  */
 void ezport_receive_a_char(char c)
 {
-    ezrb_push(ezhdl.rb,(uint8_t)c);
+    ezrb_push(ezhdl.modem_start_flag?ezhdl.modem_rb:ezhdl.rb,(uint8_t)c);
 }
 
 
@@ -138,8 +142,10 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
 {
-#ifdef USE_EZ_XMODEM
+#if USE_EZ_MODEM != 0
+    ezhdl.modem_start_flag = 0;
     ezhdl.modem_prefix = NULL;
+    ezhdl.modem_rb = ezrb_create(140);
 #endif
     ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
     ezhdl.prefix = prefix;
@@ -166,18 +172,7 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezcsl_reset_prefix();
 }
 
-#ifdef USE_EZ_XMODEM
-/**
- * @brief modem init (optional),if you need xmodem,call this after `ezcsl_init`
- *
- * @param modem_prefix
- */
-void ezcsl_xmodem_set(const char *modem_prefix,xmodem_cfg_t *cfg)
-{
-    ezhdl.modem_prefix = modem_prefix;
-    ezhdl.modem_cfg = cfg;
-}
-#endif
+
 
 /**
  * @brief set loglevel
@@ -216,6 +211,7 @@ void ezcsl_deinit(void){
         free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
+    ezrb_destroy(ezhdl.modem_rb);
 }
 
 
@@ -402,17 +398,20 @@ void ezcsl_printf(const char *fmt, ...){
  */
 static void ezcsl_submit(void)
 {
-#ifdef USE_EZ_XMODEM
-    // if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cfg!=NULL){
-    //     if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
-    //         if(xmodem_start(ezhdl.rb,ezhdl.modem_cfg) == X_TRANS_TIMEOUT){
-    //             ezcsl_printf(COLOR_RED("Xmodem Timeout!"));
-    //         }else{
-    //             ezcsl_printf(COLOR_RED("Xmodem OK!"));
-    //         }
-    //         return;
-    //     }
-    // }
+#if USE_EZ_MODEM != 0
+    if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cb!=NULL){
+        if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
+            ezhdl.modem_start_flag = 1;
+            if(modem_start(ezhdl.modem_cb) == EZ_ERR){
+                ezcsl_printf(COLOR_RED("Xmodem Timeout!\r\n"));
+            }else{
+                ezcsl_printf(COLOR_GREEN("Xmodem Success!\r\n"));
+            }
+            ezcsl_reset_prefix();
+            ezhdl.modem_start_flag = 0;
+            return;
+        }
+    }
 #endif
     uint8_t paranum=0;
     float paraF[PARA_LEN_MAX];
@@ -791,3 +790,130 @@ static void next_history_to_buf(void)
         last_load_hist = 2;
     }
 }
+
+
+
+/************************** X/Ymodem ************************************/
+#if USE_EZ_MODEM != 0
+
+#define XYM_SOH 0x01
+#define XYM_STX 0x02
+#define XYM_EOT 0x04
+#define XYM_ACK 0x06
+#define XYM_NAK 0x15
+#define XYM_CAN 0x18
+#define XYM_C   0x43
+#define XYMODEM_BUF_LEN 150
+
+
+/**
+ * @brief modem init (optional),if you need modem,call this after `ezcsl_init`
+ *
+ * @param modem_prefix
+ */
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *))
+{
+    ezhdl.modem_prefix = modem_prefix;
+    ezhdl.modem_cb = cb_func;
+}
+
+static uint16_t crc16_modem(uint8_t *data, uint16_t length)
+{
+		uint16_t crc = 0;
+    for( ; length > 0; length--)
+    {
+    	crc = crc ^ (*data++ << 8);
+    	for(int i=0; i < 8; i++)
+    	{
+    		if(crc & 0x8000)
+    			crc = (crc << 1) ^ 0x1021;
+    		else
+    			crc <<= 1;
+    	}
+    	crc &= 0xFFFF;
+    }
+    return crc;
+}
+
+
+
+/**
+ * @brief 
+ * 
+ * @param reply 
+ */
+static void modem_reply(uint8_t reply){
+    uint8_t sendbuf;
+    ezport_delay(1);
+    sendbuf = reply;
+    ezport_send_str((char*)&sendbuf, 1);
+}
+
+
+/**
+ * @brief
+ *
+ * @param rb
+ * @param cb_func callback(char*) when get an frame(128-bytes) if char* is NULL , modem finish
+ */
+static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *))
+{
+    uint8_t wait_final_eot = 0;
+    uint8_t buf[XYMODEM_BUF_LEN];
+    uint8_t bufp = 0;
+    uint16_t timeout = 0;
+    uint8_t last_packet_num = 0;
+    ezport_delay(3000);
+	
+    modem_reply(XYM_C);
+
+    /* clear ringbuffer */
+    while(ezrb_pop(ezhdl.modem_rb,buf)!=RB_EMPTY);
+
+    /* start receiving */
+    while (1) {
+        if (ezrb_pop(ezhdl.modem_rb, buf + bufp) == RB_EMPTY) {
+            ezport_delay(1);
+            timeout++;
+            if (timeout > 3000) {
+                return EZ_ERR;
+            }
+        } else {
+            timeout = 0;
+            bufp++;
+            if (bufp == 133) { // frame size
+                if (buf[0] == XYM_SOH && buf[1] == (uint8_t)(last_packet_num + 1) && buf[1] == (uint8_t)(~buf[2])) {
+                    if (crc16_modem(buf+3, 128) == ((uint16_t)(buf[131] << 8) | buf[132])) {
+                        bufp = 0;
+                        switch (cb_func((char*)buf + 3)) {
+                        case M_SEND_NEXT:
+                            last_packet_num++;
+                            modem_reply(XYM_ACK);
+                            break;
+                        case M_SEND_REPEAT:
+                            modem_reply(XYM_NAK);
+                            break;
+                        case M_SEND_ABORT:
+                        default:
+                            modem_reply(XYM_CAN);
+                            break;
+                        };
+                    } else {
+                        /* repeat when crc wrong */
+                        modem_reply(XYM_NAK);
+                    }
+                } else {
+                    /* abort when frame goes wrong */
+                    modem_reply(XYM_CAN);
+                }
+            } else if (bufp == 1 && buf[0] == XYM_EOT) {
+                modem_reply(XYM_ACK);
+                cb_func(NULL);
+                return EZ_OK;
+            }
+        }
+    }
+    return EZ_OK;
+}
+
+#endif
