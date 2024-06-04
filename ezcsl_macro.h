@@ -12,6 +12,10 @@ extern "C" {
 #define LOG_LEVEL_ALL  0xff
 #define LOG_LEVEL_NONE 0x00
 
+
+#define EZ_XMODEM_128 1
+#define EZ_YMODEM_1K 2
+
 #ifdef __cplusplus 
 }
 #endif 
