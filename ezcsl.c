@@ -1,24 +1,29 @@
 #include "ezcsl.h"
-#include "stdlib.h" // malloc
 #include "ezrb.h"
 #include "ezstring.h"
 #include "stdio.h"  // vsprintf
+#include "stdlib.h" // malloc
 
 
-#define IS_VISIBLE(c)       ((c) >= 0x20 && (c) <= 0x7e)
-#define IS_BACKSPACE(c)     ((c)==0x08 || (c)==0x7f)
-#define IS_TAB(c)           ((c)==0x09)
-#define IS_ENTER(c)         ((c)==0x0d)
-#define IS_CTRL_C(c)        ((c)==0x03)
-#define IS_CTRL_D(c)        ((c)==0x04)
+#if USE_EZ_MODEM == EZ_XMODEM_128
+#define XYMODEM_BUF_LEN 135
+#elif USE_EZ_MODEM == EZ_YMODEM_1K
+#define XYMODEM_BUF_LEN 1030
+#endif
 
 
-#define EXPAND_DESC(c) ((c)=='s'?"string":((c)=='i'?"integer":((c)=='f'?"float":"unkown")))
+#define IS_VISIBLE(c)   ((c) >= 0x20 && (c) <= 0x7e)
+#define IS_BACKSPACE(c) ((c) == 0x08 || (c) == 0x7f)
+#define IS_TAB(c)       ((c) == 0x09)
+#define IS_ENTER(c)     ((c) == 0x0d)
+#define IS_CTRL_C(c)    ((c) == 0x03)
+#define IS_CTRL_D(c)    ((c) == 0x04)
 
-const char* strNULL="";
-#define CHECK_NULL_STR(c) ((c)==NULL?strNULL:(c))
 
+#define EXPAND_DESC(c) ((c) == 's' ? "string" : ((c) == 'i' ? "integer" : ((c) == 'f' ? "float" : "unkown")))
 
+const char *strNULL = "";
+#define CHECK_NULL_STR(c) ((c) == NULL ? strNULL : (c))
 
 
 static struct EzCslHandleStruct {
@@ -48,9 +53,10 @@ static struct EzCslHandleStruct {
     /* modem */
 #if USE_EZ_MODEM != 0
     uint8_t modem_start_flag;
-    ezrb_t *modem_rb;
+    uint8_t modem_buf[XYMODEM_BUF_LEN];
+    volatile uint16_t modem_p;
     const char *modem_prefix;
-    modem_rev_func_t (*modem_cb)(char *);
+    modem_rev_func_t (*modem_cb)(char *, uint16_t);
 #endif
     /* sudo */
     const char *sudo_psw;
@@ -59,14 +65,23 @@ static struct EzCslHandleStruct {
 } ezhdl;
 
 
-#define LOCK() do{while(ezhdl.lock!=0){ezport_delay(10);};ezhdl.lock=1;}while(0)
-#define UNLOCK() do{ezhdl.lock=0;}while(0)
+#define LOCK()                    \
+    do {                          \
+        while (ezhdl.lock != 0) { \
+            ezport_delay(10);     \
+        };                        \
+        ezhdl.lock = 1;           \
+    } while (0)
+#define UNLOCK()        \
+    do {                \
+        ezhdl.lock = 0; \
+    } while (0)
 
 
 /* ez console port function */
 void ezport_receive_a_char(char c);
 
-void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
+void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw);
 void ezcsl_log_level_set(ez_log_level_mask_t mask);
 uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
 void ezcsl_deinit(void);
@@ -74,8 +89,8 @@ uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
 void ezcsl_printf(const char *fmt, ...);
 #if USE_EZ_MODEM != 0
-void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *));
-static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *));
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *, uint16_t));
+static ez_sta_t modem_start(void);
 static uint16_t crc16_modem(uint8_t *data, uint16_t length);
 static void modem_reply(uint8_t reply);
 #endif
@@ -87,23 +102,22 @@ static uint8_t load_history(void);
 static void last_history_to_buf(void);
 static void next_history_to_buf(void);
 
-static ez_cmd_t *cmd_head=NULL;
-static ez_cmd_unit_t *cmd_unit_head=NULL;
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,uint8_t need_sudo, void (*callback)(uint16_t,ez_param_t*));
-ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit,uint16_t id,const char *title_sub,const char *describe,const char* para_desc);
+static ez_cmd_t *cmd_head = NULL;
+static ez_cmd_unit_t *cmd_unit_head = NULL;
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *));
+ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc);
 
 /* ez inner cmd */
-static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para);
-
+static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
 
 
 /**
  * @brief reset with prefix
- * 
+ *
  */
 void ezcsl_reset_prefix(void)
 {
-    ezcsl_printf(MOVE_CURSOR_ABS(0)"%s"ERASE_TO_END(), ezhdl.prefix);
+    ezcsl_printf(MOVE_CURSOR_ABS(0) "%s" ERASE_TO_END(), ezhdl.prefix);
     ezhdl.buf[0] = 0;
     ezhdl.bufl = 0;
     ezhdl.bufp = 0;
@@ -111,11 +125,11 @@ void ezcsl_reset_prefix(void)
 
 /**
  * @brief reset with empty prefix
- * 
+ *
  */
 static void ezcsl_reset_empty(void)
 {
-    ezcsl_printf(MOVE_CURSOR_ABS(0)ERASE_TO_END());
+    ezcsl_printf(MOVE_CURSOR_ABS(0) ERASE_TO_END());
     ezhdl.buf[0] = 0;
     ezhdl.bufl = 0;
     ezhdl.bufp = 0;
@@ -128,26 +142,30 @@ static void ezcsl_reset_empty(void)
  */
 void ezport_receive_a_char(char c)
 {
-    ezrb_push(ezhdl.modem_start_flag?ezhdl.modem_rb:ezhdl.rb,(uint8_t)c);
+    if (ezhdl.modem_start_flag == 0) {
+        ezrb_push(ezhdl.rb, (uint8_t)c);
+    } else {
+        ezhdl.modem_buf[ezhdl.modem_p] = (uint8_t)c;
+        if(ezhdl.modem_p<XYMODEM_BUF_LEN-1)ezhdl.modem_p++;
+    }
 }
-
 
 
 /**
  * @brief init
- * 
+ *
  * @param prefix prefix of shell
- * @param welcome 
- * @param sudo_psw password of sudo, NULL = no sudo  
+ * @param welcome
+ * @param sudo_psw password of sudo, NULL = no sudo
  */
-void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
+void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 {
 #if USE_EZ_MODEM != 0
     ezhdl.modem_start_flag = 0;
     ezhdl.modem_prefix = NULL;
-    ezhdl.modem_rb = ezrb_create(140);
+    ezhdl.modem_p = 0;
 #endif
-    ezhdl.prefix_len = estrlen_s(prefix,CSL_BUF_LEN);
+    ezhdl.prefix_len = estrlen_s(prefix, CSL_BUF_LEN);
     ezhdl.prefix = prefix;
     ezhdl.bufp = 0;
     ezhdl.bufl = 0;
@@ -162,56 +180,57 @@ void ezcsl_init(const char *prefix,const char *welcome,const char *sudo_psw)
     ezhdl.psw_inputing = 0;
     ezhdl.sudo_checked = 0;
 
-    ezhdl.rb = ezrb_create(CSL_BUF_LEN/2);
+    ezhdl.rb = ezrb_create(CSL_BUF_LEN / 2);
 
     ezcsl_log_level_set(LOG_LEVEL_ALL);
-    ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?","help",0,ezcsl_cmd_help_callback);
-    ezcsl_cmd_register(unit,0,NULL,NULL,"");
-    ezport_send_str((char*)welcome,estrlen(welcome)); 
+    ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?", "help", 0, ezcsl_cmd_help_callback);
+    ezcsl_cmd_register(unit, 0, NULL, NULL, "");
+    ezport_send_str((char *)welcome, estrlen(welcome));
     ezcsl_printf("you can input '?' for help\r\n");
     ezcsl_reset_prefix();
 }
 
 
-
 /**
  * @brief set loglevel
- * 
- * @param mask 
+ *
+ * @param mask
  */
-void ezcsl_log_level_set(ez_log_level_mask_t mask){
+void ezcsl_log_level_set(ez_log_level_mask_t mask)
+{
     ezhdl.log_level_mask = mask;
 }
 
 /**
  * @brief log level get
- * 
- * @return ez_log_level_mask_t 
+ *
+ * @return ez_log_level_mask_t
  */
-uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask){
+uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask)
+{
     return (ezhdl.log_level_mask & mask);
 }
 
 
 /**
  * @brief deinit
- * 
+ *
  */
-void ezcsl_deinit(void){
-    ez_cmd_t *p1=cmd_head;
-    while(p1!=NULL){
-        ez_cmd_t *p_del=p1;
-        p1=p1->next;
+void ezcsl_deinit(void)
+{
+    ez_cmd_t *p1 = cmd_head;
+    while (p1 != NULL) {
+        ez_cmd_t *p_del = p1;
+        p1 = p1->next;
         free(p_del);
     }
-    ez_cmd_unit_t *p2=cmd_unit_head;
-    while(p2!=NULL){
-        ez_cmd_unit_t *p_del=p2;
-        p2=p2->next;
+    ez_cmd_unit_t *p2 = cmd_unit_head;
+    while (p2 != NULL) {
+        ez_cmd_unit_t *p_del = p2;
+        p2 = p2->next;
         free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
-    ezrb_destroy(ezhdl.modem_rb);
 }
 
 
@@ -234,36 +253,37 @@ void ezcsl_deinit(void){
         }                                        \
     } while (0)
 
-#define DELETE_KEY_DETECT(c, delete)                               \
-    do {                                                           \
-        if (c == delete &&ezhdl.bufp < ezhdl.bufl) {               \
-            ezcsl_printf(SAVE_CURSOR_POS());                       \
+#define DELETE_KEY_DETECT(c, delete)                             \
+    do {                                                         \
+        if (c == delete &&ezhdl.bufp < ezhdl.bufl) {             \
+            ezcsl_printf(SAVE_CURSOR_POS());                     \
             for (uint16_t i = ezhdl.bufp; i < ezhdl.bufl; i++) { \
-                ezhdl.buf[i] = ezhdl.buf[i + 1];                   \
-                ezport_send_str(ezhdl.buf + i, 1);                 \
-            }                                                      \
-            ezhdl.bufl--;                                          \
-            ezcsl_printf(ERASE_TO_END() RESTORE_CURSOR_POS());     \
-        }                                                          \
+                ezhdl.buf[i] = ezhdl.buf[i + 1];                 \
+                ezport_send_str(ezhdl.buf + i, 1);               \
+            }                                                    \
+            ezhdl.bufl--;                                        \
+            ezcsl_printf(ERASE_TO_END() RESTORE_CURSOR_POS());   \
+        }                                                        \
     } while (0)
 
 
-#define IS_POWERSHELL_PREFIX(c) (c==0x00)
-#define IS_BASH_PREFIX(c)       (c==0x1b)
-#define IS_BASH_1_PREFIX(c)     (c=='[')
-#define IS_BASH_2_PREFIX(c)     (c=='3')
+#define IS_POWERSHELL_PREFIX(c) (c == 0x00)
+#define IS_BASH_PREFIX(c)       (c == 0x1b)
+#define IS_BASH_1_PREFIX(c)     (c == '[')
+#define IS_BASH_2_PREFIX(c)     (c == '3')
 
-#define MATCH_MODE_DEFAULT      0
-#define MATCH_MODE_POWERSHELL   1
-#define MATCH_MODE_BASH         2
-#define MATCH_MODE_BASH_1       3
-#define MATCH_MODE_BASH_2       4
+#define MATCH_MODE_DEFAULT    0
+#define MATCH_MODE_POWERSHELL 1
+#define MATCH_MODE_BASH       2
+#define MATCH_MODE_BASH_1     3
+#define MATCH_MODE_BASH_2     4
 
 /**
  * @brief call it in a loop
- * 
+ *
  */
-uint8_t ezcsl_tick(void) {
+uint8_t ezcsl_tick(void)
+{
     static uint8_t match_mode = MATCH_MODE_DEFAULT;
     uint8_t c;
     while (ezrb_pop(ezhdl.rb, &c) == RB_OK) {
@@ -313,7 +333,7 @@ uint8_t ezcsl_tick(void) {
                 if (!ezhdl.psw_inputing) {
                     ezcsl_printf(CURSOR_BACK(1) SAVE_CURSOR_POS());
                 }
-                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl-1; i++) {
+                for (uint16_t i = ezhdl.bufp - 1; i < ezhdl.bufl - 1; i++) {
                     ezhdl.buf[i] = ezhdl.buf[i + 1];
                     if (!ezhdl.psw_inputing) {
                         ezport_send_str(ezhdl.buf + i, 1);
@@ -330,13 +350,13 @@ uint8_t ezcsl_tick(void) {
                 if (!ezhdl.psw_inputing) {
                     ezcsl_submit();
                 } else {
-                    if(estrcmp(ezhdl.sudo_psw,ezhdl.buf)==0){
+                    if (estrcmp(ezhdl.sudo_psw, ezhdl.buf) == 0) {
                         /* password success */
                         ezcsl_printf(COLOR_GREEN("\r\nPassword Checked!\r\n"));
                         ezcsl_reset_prefix();
                         ezhdl.sudo_checked = 1;
                         ezhdl.psw_inputing = 0;
-                    }else{
+                    } else {
                         ezcsl_printf(COLOR_RED("\r\nWrong Password! Try again.\r\n"));
                         ezcsl_reset_empty();
                     }
@@ -345,14 +365,14 @@ uint8_t ezcsl_tick(void) {
                 /* ctrl+c */
                 ezcsl_printf("^C\r\n");
                 ezcsl_reset_prefix();
-                if(ezhdl.psw_inputing){
+                if (ezhdl.psw_inputing) {
                     ezhdl.psw_inputing = 0;
                 }
             } else if (IS_CTRL_D(c)) {
                 /* ctrl+D */
                 ezcsl_printf("^D\r\n");
                 ezcsl_reset_prefix();
-                if(ezhdl.psw_inputing){
+                if (ezhdl.psw_inputing) {
                     ezhdl.psw_inputing = 0;
                 }
                 return 1;
@@ -374,37 +394,37 @@ uint8_t ezcsl_tick(void) {
 
 /**
  * @brief printf
- * 
- * @param fmt 
- * @param ... 
+ *
+ * @param fmt
+ * @param ...
  */
-void ezcsl_printf(const char *fmt, ...){
+void ezcsl_printf(const char *fmt, ...)
+{
     LOCK();
     uint16_t printed;
     va_list args;
     char dat_buf[PRINT_BUF_LEN];
     va_start(args, fmt);
-    printed = vsnprintf(dat_buf,PRINT_BUF_LEN, fmt, args); 
-    ezport_send_str(dat_buf, printed);  
+    printed = vsnprintf(dat_buf, PRINT_BUF_LEN, fmt, args);
+    ezport_send_str(dat_buf, printed);
     va_end(args);
     UNLOCK();
 }
 
 
-
 /**
  * @brief submit input
- * 
+ *
  */
 static void ezcsl_submit(void)
 {
 #if USE_EZ_MODEM != 0
-    if(ezhdl.modem_prefix!=NULL && ezhdl.modem_cb!=NULL){
-        if(estrncmp(ezhdl.modem_prefix,ezhdl.buf,estrlen(ezhdl.modem_prefix))==0){
+    if (ezhdl.modem_prefix != NULL && ezhdl.modem_cb != NULL) {
+        if (estrncmp(ezhdl.modem_prefix, ezhdl.buf, estrlen(ezhdl.modem_prefix)) == 0) {
             ezhdl.modem_start_flag = 1;
-            if(modem_start(ezhdl.modem_cb) == EZ_ERR){
+            if (modem_start() == EZ_ERR) {
                 ezcsl_printf(COLOR_RED("Xmodem Timeout!\r\n"));
-            }else{
+            } else {
                 ezcsl_printf(COLOR_GREEN("Xmodem Success!\r\n"));
             }
             ezcsl_reset_prefix();
@@ -413,37 +433,37 @@ static void ezcsl_submit(void)
         }
     }
 #endif
-    uint8_t paranum=0;
+    uint8_t paranum = 0;
     float paraF[PARA_LEN_MAX];
     int paraI[PARA_LEN_MAX];
     ez_param_t para[PARA_LEN_MAX];
-    char *cmd=ezhdl.buf;
-    const char *subtitle=strNULL;
-    const char *maintitle=strNULL;
-    
+    char *cmd = ezhdl.buf;
+    const char *subtitle = strNULL;
+    const char *maintitle = strNULL;
+
     char *a_split;
-    uint8_t split_cnt=0;
+    uint8_t split_cnt = 0;
 
     buf_to_history();
 
     if (ezhdl.bufl > CSL_BUF_LEN - 1) {
         ezhdl.bufl = CSL_BUF_LEN - 1;
     }
-    ezhdl.buf[ezhdl.bufl]=SPLIT_CHAR; // add a SPLIT_CHR to the end for estrtokc 
-    // ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for estrtokc 
+    ezhdl.buf[ezhdl.bufl] = SPLIT_CHAR; // add a SPLIT_CHR to the end for estrtokc
+    // ezhdl.buf[ezhdl.bufl+1]=0; // add a SPLIT_CHR to the end for estrtokc
     while (1) {
         a_split = estrtokc((char *)cmd, SPLIT_CHAR);
         if (a_split != NULL) {
             switch (split_cnt) {
             case 0:
-                maintitle=a_split;
+                maintitle = a_split;
                 break;
             case 1:
-                subtitle=a_split;
+                subtitle = a_split;
                 break;
             default:
-                if(paranum<PARA_LEN_MAX && estrlen(a_split)>0){
-                    para[paranum]=(ez_param_t*)a_split;
+                if (paranum < PARA_LEN_MAX && estrlen(a_split) > 0) {
+                    para[paranum] = (ez_param_t *)a_split;
                     paranum++;
                 }
                 break;
@@ -452,18 +472,18 @@ static void ezcsl_submit(void)
             break;
         }
         split_cnt++;
-        cmd=NULL; //for estrtokc continue
+        cmd = NULL; // for estrtokc continue
     };
-    
+
 
     ezcsl_printf("\r\n");
-    // Cmd Match 
+    // Cmd Match
     ez_cmd_t *cmd_p = cmd_head;
     uint8_t match_ok_flag = 0; // 0 match fail ,1 main match ok ,2 main and sub  match  ok
     while (cmd_p != NULL) {
         if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
             match_ok_flag = 1;
-            if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw!=NULL) {
+            if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw != NULL) {
                 /* query sudo password */
                 ezcsl_printf("Please Input Sudo Password :\r\n");
                 ezcsl_reset_empty();
@@ -481,23 +501,23 @@ static void ezcsl_submit(void)
                         } break;
                         case 'i': {
                             paraI[i] = (int)atoi((const char *)para[i]);
-                            para[i] = (void*)&paraI[i];
+                            para[i] = (void *)&paraI[i];
                         } break;
                         case 'f': {
                             paraF[i] = (float)atof((const char *)para[i]);
-                            para[i] = (void*)&paraF[i];
+                            para[i] = (void *)&paraF[i];
                         } break;
                         default:
                             break;
                         }
                     }
-                    cmd_p->unit->callback(cmd_p->id,para); // user can use `ezcsl_printf` in callback
+                    cmd_p->unit->callback(cmd_p->id, para); // user can use `ezcsl_printf` in callback
                 } else {
                     ezcsl_printf("\033[31mCmd Error!\033[m %s,%s", maintitle, subtitle);
-                    for(uint8_t i=0;i<cmd_p->para_num;i++){
-                    ezcsl_printf(",<%s>",EXPAND_DESC(cmd_p->para_desc[i]));
+                    for (uint8_t i = 0; i < cmd_p->para_num; i++) {
+                        ezcsl_printf(",<%s>", EXPAND_DESC(cmd_p->para_desc[i]));
                     }
-                    ezcsl_printf(" : %s\r\n",cmd_p->describe);
+                    ezcsl_printf(" : %s\r\n", cmd_p->describe);
                 }
                 break;
             }
@@ -505,51 +525,50 @@ static void ezcsl_submit(void)
         cmd_p = cmd_p->next;
     }
 
-    switch (match_ok_flag)
-    {
+    switch (match_ok_flag) {
     case 0:
-        ezcsl_printf(COLOR_RED("Unknown Command")" %s\r\n",maintitle);
+        ezcsl_printf(COLOR_RED("Unknown Command") " %s\r\n", maintitle);
         break;
     case 1:
         cmd_p = cmd_head;
-        ezcsl_printf(COLOR_GREEN("Sub Command & Description List ")"\r\n");
-        ezcsl_printf(COLOR_GREEN("========================= ")"\r\n");
+        ezcsl_printf(COLOR_GREEN("Sub Command & Description List ") "\r\n");
+        ezcsl_printf(COLOR_GREEN("========================= ") "\r\n");
         while (cmd_p != NULL) {
             if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
                 ezcsl_printf("%s,%s:  %s\r\n", cmd_p->unit->title_main, cmd_p->title_sub, cmd_p->describe);
             }
             cmd_p = cmd_p->next;
         }
-        ezcsl_printf(COLOR_GREEN("========================= ")"\r\n");
+        ezcsl_printf(COLOR_GREEN("========================= ") "\r\n");
         break;
     default:
         break;
     }
-        
-    
+
+
     ezcsl_reset_prefix();
 }
 
 
 /**
  * @brief auto complete
- * 
+ *
  */
 static void ezcsl_tabcomplete(void)
 {
     char existed_cmdbuf[CSL_BUF_LEN] = {0};
     uint8_t match_ok_cnt = 0;
-    if(estrlen_s(ezhdl.buf,CSL_BUF_LEN)==0){
+    if (estrlen_s(ezhdl.buf, CSL_BUF_LEN) == 0) {
         return;
     }
     ez_cmd_t *p;
     p = cmd_head;
     while (p != NULL) {
         existed_cmdbuf[0] = 0;
-        estrcat_s(existed_cmdbuf,CSL_BUF_LEN,p->unit->title_main);
-        estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-        estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-        if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf,CSL_BUF_LEN)) == 0) {
+        estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->unit->title_main);
+        estrcatc_s(existed_cmdbuf, CSL_BUF_LEN, SPLIT_CHAR);
+        estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->title_sub);
+        if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf, CSL_BUF_LEN)) == 0) {
             match_ok_cnt++;
         }
         p = p->next;
@@ -558,34 +577,34 @@ static void ezcsl_tabcomplete(void)
         p = cmd_head;
         while (p != NULL) {
             existed_cmdbuf[0] = 0;
-            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
-            estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-            if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf,CSL_BUF_LEN)) == 0) {
-                estrcpy_s(ezhdl.buf,CSL_BUF_LEN, existed_cmdbuf);
-                ezhdl.bufp = ezhdl.bufl = estrlen_s(ezhdl.buf,CSL_BUF_LEN);
-                ezcsl_printf(MOVE_CURSOR_ABS(0)"%s%s"ERASE_TO_END(),ezhdl.prefix,ezhdl.buf);
+            estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->unit->title_main);
+            estrcatc_s(existed_cmdbuf, CSL_BUF_LEN, SPLIT_CHAR);
+            estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->title_sub);
+            if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf, CSL_BUF_LEN)) == 0) {
+                estrcpy_s(ezhdl.buf, CSL_BUF_LEN, existed_cmdbuf);
+                ezhdl.bufp = ezhdl.bufl = estrlen_s(ezhdl.buf, CSL_BUF_LEN);
+                ezcsl_printf(MOVE_CURSOR_ABS(0) "%s%s" ERASE_TO_END(), ezhdl.prefix, ezhdl.buf);
                 break;
             }
             p = p->next;
         }
     } else if (match_ok_cnt > 1) {
-        char autocomplete[CSL_BUF_LEN]={0};
-        ezport_send_str((char*)"\r\n",2);
+        char autocomplete[CSL_BUF_LEN] = {0};
+        ezport_send_str((char *)"\r\n", 2);
         p = cmd_head;
         while (p != NULL) {
             existed_cmdbuf[0] = 0;
-            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->unit->title_main);
-            estrcatc_s(existed_cmdbuf,CSL_BUF_LEN, SPLIT_CHAR);
-            estrcat_s(existed_cmdbuf,CSL_BUF_LEN, p->title_sub);
-            if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf,CSL_BUF_LEN)) == 0) {
+            estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->unit->title_main);
+            estrcatc_s(existed_cmdbuf, CSL_BUF_LEN, SPLIT_CHAR);
+            estrcat_s(existed_cmdbuf, CSL_BUF_LEN, p->title_sub);
+            if (estrncmp(ezhdl.buf, existed_cmdbuf, estrlen_s(ezhdl.buf, CSL_BUF_LEN)) == 0) {
                 ezcsl_printf("%s\t", existed_cmdbuf);
                 if (autocomplete[0] == 0) {
-                    estrcpy_s(autocomplete,CSL_BUF_LEN,existed_cmdbuf);
-                }else{
-                    for(uint16_t i=0;i<estrlen_s(autocomplete,CSL_BUF_LEN);i++){
-                        if(autocomplete[i]!=existed_cmdbuf[i]){
-                            autocomplete[i]=0;
+                    estrcpy_s(autocomplete, CSL_BUF_LEN, existed_cmdbuf);
+                } else {
+                    for (uint16_t i = 0; i < estrlen_s(autocomplete, CSL_BUF_LEN); i++) {
+                        if (autocomplete[i] != existed_cmdbuf[i]) {
+                            autocomplete[i] = 0;
                             break;
                         }
                     }
@@ -593,10 +612,10 @@ static void ezcsl_tabcomplete(void)
             }
             p = p->next;
         }
-        estrcpy_s(ezhdl.buf,CSL_BUF_LEN,autocomplete);
-        ezhdl.bufp=ezhdl.bufl=estrlen_s(ezhdl.buf,CSL_BUF_LEN);
-        ezport_send_str((char*)"\r\n",2);
-        ezport_send_str((char*)ezhdl.prefix, ezhdl.prefix_len);
+        estrcpy_s(ezhdl.buf, CSL_BUF_LEN, autocomplete);
+        ezhdl.bufp = ezhdl.bufl = estrlen_s(ezhdl.buf, CSL_BUF_LEN);
+        ezport_send_str((char *)"\r\n", 2);
+        ezport_send_str((char *)ezhdl.prefix, ezhdl.prefix_len);
         ezport_send_str(ezhdl.buf, ezhdl.bufl);
     }
 }
@@ -607,46 +626,47 @@ static void ezcsl_tabcomplete(void)
  * @param title_main main title ,cannot null or '' ,length < 10
  * @author Jinlin Deng
  */
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,uint8_t need_sudo,void (*callback)(uint16_t,ez_param_t* )){
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *))
+{
     LOCK();
-    if (estrlen(title_main)==0 || estrlen(title_main)>=10 || callback==NULL){
+    if (estrlen(title_main) == 0 || estrlen(title_main) >= 10 || callback == NULL) {
         return NULL;
     }
-    
-        ez_cmd_unit_t *p = cmd_unit_head;
-        while (p != NULL) { //duplicate
-            if(estrcmp(p->title_main,title_main)==0){
-                UNLOCK();
-                return NULL;
-            }
+
+    ez_cmd_unit_t *p = cmd_unit_head;
+    while (p != NULL) { // duplicate
+        if (estrcmp(p->title_main, title_main) == 0) {
+            UNLOCK();
+            return NULL;
+        }
+        p = p->next;
+    }
+
+    ez_cmd_unit_t *p_add = (ez_cmd_unit_t *)malloc(sizeof(ez_cmd_unit_t));
+    p_add->describe = CHECK_NULL_STR(describe);
+    p_add->next = NULL;
+    p_add->title_main = title_main;
+    p_add->callback = callback;
+    p_add->need_sudo = need_sudo;
+
+    if (cmd_unit_head == NULL) {
+        cmd_unit_head = p_add;
+    } else {
+        p = cmd_unit_head;
+        while (p->next != NULL) {
             p = p->next;
         }
-        
-        ez_cmd_unit_t *p_add = (ez_cmd_unit_t *)malloc(sizeof(ez_cmd_unit_t));
-        p_add->describe=CHECK_NULL_STR(describe);
-        p_add->next = NULL;
-        p_add->title_main = title_main;
-        p_add->callback=callback;
-        p_add->need_sudo=need_sudo;
-        
-        if(cmd_unit_head==NULL){
-            cmd_unit_head=p_add;
-        }else{
-            p = cmd_unit_head;
-            while (p->next != NULL) {
-                p = p->next;
-            }
-            p->next = p_add;
-        }
-        
-        UNLOCK();
-        return p_add;
+        p->next = p_add;
+    }
+
+    UNLOCK();
+    return p_add;
 }
 
 
 /**
  * create a cmd unit
- * @param title_sub sub title ,can set null 
+ * @param title_sub sub title ,can set null
  * @param describe describe your cmd
  * @param para_desc the description of parameters your cmd need,s->string,i->int,f->float
  * @author Jinlin Deng
@@ -688,23 +708,22 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
 }
 
 
-
 /**
  * @brief help cmd callback
- * 
+ *
  * @param id cmd id
  * @param para param
  */
-static void ezcsl_cmd_help_callback(uint16_t id,ez_param_t* para)
+static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 {
     ez_cmd_unit_t *p = cmd_unit_head;
-    ezcsl_printf(COLOR_GREEN("Main Command & Description List")" \r\n");
-    ezcsl_printf(COLOR_GREEN("=========================")" \r\n");
-    while (p!= NULL) {
-        ezcsl_printf("%-10s %s\r\n", p->title_main,  p->describe);
+    ezcsl_printf(COLOR_GREEN("Main Command & Description List") " \r\n");
+    ezcsl_printf(COLOR_GREEN("=========================") " \r\n");
+    while (p != NULL) {
+        ezcsl_printf("%-10s %s\r\n", p->title_main, p->describe);
         p = p->next;
     }
-    ezcsl_printf(COLOR_GREEN("=========================")" \r\n");
+    ezcsl_printf(COLOR_GREEN("=========================") " \r\n");
 }
 
 
@@ -761,7 +780,7 @@ static uint8_t load_history(void)
 
 /**
  * @brief load last record
- * 
+ *
  */
 static void last_history_to_buf(void)
 {
@@ -776,7 +795,7 @@ static void last_history_to_buf(void)
 
 /**
  * @brief load next record
- * 
+ *
  */
 static void next_history_to_buf(void)
 {
@@ -792,7 +811,6 @@ static void next_history_to_buf(void)
 }
 
 
-
 /************************** X/Ymodem ************************************/
 #if USE_EZ_MODEM != 0
 
@@ -803,7 +821,6 @@ static void next_history_to_buf(void)
 #define XYM_NAK 0x15
 #define XYM_CAN 0x18
 #define XYM_C   0x43
-#define XYMODEM_BUF_LEN 150
 
 
 /**
@@ -811,7 +828,7 @@ static void next_history_to_buf(void)
  *
  * @param modem_prefix
  */
-void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *))
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *, uint16_t))
 {
     ezhdl.modem_prefix = modem_prefix;
     ezhdl.modem_cb = cb_func;
@@ -819,60 +836,58 @@ void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char 
 
 static uint16_t crc16_modem(uint8_t *data, uint16_t length)
 {
-		uint16_t crc = 0;
-    for( ; length > 0; length--)
-    {
-    	crc = crc ^ (*data++ << 8);
-    	for(int i=0; i < 8; i++)
-    	{
-    		if(crc & 0x8000)
-    			crc = (crc << 1) ^ 0x1021;
-    		else
-    			crc <<= 1;
-    	}
-    	crc &= 0xFFFF;
+    uint16_t crc = 0;
+    for (; length > 0; length--) {
+        crc = crc ^ (*data++ << 8);
+        for (int i = 0; i < 8; i++) {
+            if (crc & 0x8000)
+                crc = (crc << 1) ^ 0x1021;
+            else
+                crc <<= 1;
+        }
+        crc &= 0xFFFF;
     }
     return crc;
-}
-
-
-
-/**
- * @brief 
- * 
- * @param reply 
- */
-static void modem_reply(uint8_t reply){
-    uint8_t sendbuf;
-    ezport_delay(1);
-    sendbuf = reply;
-    ezport_send_str((char*)&sendbuf, 1);
 }
 
 
 /**
  * @brief
  *
- * @param rb
- * @param cb_func callback(char*) when get an frame(128-bytes) if char* is NULL , modem finish
+ * @param reply
  */
-static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *))
+static void modem_reply(uint8_t reply)
 {
-    uint8_t wait_final_eot = 0;
-    uint8_t buf[XYMODEM_BUF_LEN];
-    uint8_t bufp = 0;
-    uint16_t timeout = 0;
-    uint8_t last_packet_num = 0;
-    ezport_delay(3000);
-	
-    modem_reply(XYM_C);
+    uint8_t sendbuf;
+    ezport_delay(1);
+    sendbuf = reply;
+    ezport_send_str((char *)&sendbuf, 1);
+}
 
-    /* clear ringbuffer */
-    while(ezrb_pop(ezhdl.modem_rb,buf)!=RB_EMPTY);
+
+/**
+ * @brief
+ *
+ */
+static ez_sta_t modem_start(void)
+{
+    uint16_t frame_size = 0;
+    uint16_t timeout = 0;
+    uint16_t bufp_last_time_out = 0; // timeout
+    uint8_t last_packet_num = 0;
+#if USE_EZ_MODEM == EZ_YMODEM_1K
+    uint8_t rev_file_info = 0;
+    uint8_t eot_confirm = 0;
+#endif
+
+    ezhdl.modem_p = 0;
+    ezport_delay(3000);
+
+    modem_reply(XYM_C);
 
     /* start receiving */
     while (1) {
-        if (ezrb_pop(ezhdl.modem_rb, buf + bufp) == RB_EMPTY) {
+        if (bufp_last_time_out == ezhdl.modem_p) {
             ezport_delay(1);
             timeout++;
             if (timeout > 3000) {
@@ -880,12 +895,14 @@ static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *))
             }
         } else {
             timeout = 0;
-            bufp++;
-            if (bufp == 133) { // frame size
-                if (buf[0] == XYM_SOH && buf[1] == (uint8_t)(last_packet_num + 1) && buf[1] == (uint8_t)(~buf[2])) {
-                    if (crc16_modem(buf+3, 128) == ((uint16_t)(buf[131] << 8) | buf[132])) {
-                        bufp = 0;
-                        switch (cb_func((char*)buf + 3)) {
+            bufp_last_time_out = ezhdl.modem_p;
+
+#if USE_EZ_MODEM == EZ_XMODEM_128
+            if (ezhdl.modem_buf[0] == XYM_SOH && ezhdl.modem_p == 133) { // frame size
+                if (ezhdl.modem_buf[1] == (uint8_t)(last_packet_num + 1) && ezhdl.modem_buf[1] == (uint8_t)(~ezhdl.modem_buf[2])) {
+                    if (crc16_modem(ezhdl.modem_buf + 3, 128) == ((uint16_t)(ezhdl.modem_buf[131] << 8) | ezhdl.modem_buf[132])) {
+                        ezhdl.modem_p = 0;
+                        switch (ezhdl.modem_cb((char *)ezhdl.modem_buf + 3, 128)) {
                         case M_SEND_NEXT:
                             last_packet_num++;
                             modem_reply(XYM_ACK);
@@ -905,12 +922,67 @@ static ez_sta_t modem_start(modem_rev_func_t (*cb_func)(char *))
                 } else {
                     /* abort when frame goes wrong */
                     modem_reply(XYM_CAN);
+                    return EZ_ERR;
                 }
-            } else if (bufp == 1 && buf[0] == XYM_EOT) {
+            } else if (ezhdl.modem_p == 1 && ezhdl.modem_buf[0] == XYM_EOT) {
+                ezhdl.modem_p = 0;
                 modem_reply(XYM_ACK);
-                cb_func(NULL);
+                ezhdl.modem_cb(NULL, 0);
                 return EZ_OK;
             }
+#elif USE_EZ_MODEM == EZ_YMODEM_1K
+            if (ezhdl.modem_buf[0] == XYM_SOH) {
+                frame_size = 128; // 128+5
+            } else if (ezhdl.modem_buf[0] == XYM_STX) {
+                frame_size = 1024; // 1024+5
+            } else if (ezhdl.modem_p == 1 && ezhdl.modem_buf[0] == XYM_EOT) {
+                ezhdl.modem_p = 0;
+                if (eot_confirm == 0) {
+									  ezport_delay(1000);
+                    modem_reply(XYM_NAK);
+                    eot_confirm = 1;
+                } else {
+                    modem_reply(XYM_ACK);
+                    modem_reply(XYM_C);
+                    ezhdl.modem_cb(NULL, 0);
+                    return EZ_OK;
+                }
+            }
+            if (ezhdl.modem_p == frame_size + 5 && frame_size != 0) {
+                ezhdl.modem_p = 0;
+                if (ezhdl.modem_buf[1] == (uint8_t)(last_packet_num) && ezhdl.modem_buf[1] == (uint8_t)(~ezhdl.modem_buf[2])) {
+                    if (crc16_modem(ezhdl.modem_buf + 3, frame_size) == ((uint16_t)(ezhdl.modem_buf[frame_size + 3] << 8) | ezhdl.modem_buf[frame_size + 4])) {
+                        switch (ezhdl.modem_cb((char *)ezhdl.modem_buf + 3, frame_size)) {
+                        case M_SEND_NEXT:
+													last_packet_num++;
+													if(rev_file_info == 0){
+													  rev_file_info =1;
+														modem_reply(XYM_ACK);
+                            modem_reply(XYM_C);
+													}else{  
+                            modem_reply(XYM_ACK);
+													}
+
+                            break;
+                        case M_SEND_REPEAT:
+                            modem_reply(XYM_NAK);
+                            break;
+                        case M_SEND_ABORT:
+                        default:
+                            modem_reply(XYM_CAN);
+                            break;
+                        };
+                    } else {
+                        /* repeat when crc wrong */
+                        modem_reply(XYM_NAK);
+                    }
+                } else {
+                    /* abort when frame goes wrong */
+                    modem_reply(XYM_CAN);
+                    return EZ_ERR;
+                }
+            }
+#endif
         }
     }
     return EZ_OK;

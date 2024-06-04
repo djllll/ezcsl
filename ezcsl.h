@@ -47,7 +47,7 @@ typedef enum{
     M_SEND_ABORT
 }modem_rev_func_t;
 
-extern void ezcsl_modem_set(const char *modem_prefix,modem_rev_func_t (*cb_func)(char *));
+extern void ezcsl_modem_set(const char *modem_prefix,modem_rev_func_t (*cb_func)(char *,uint16_t));
 #endif
 
 extern void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);
