@@ -2,13 +2,14 @@
 #define _EZCSL_H_
 
 #include "stdarg.h"
-#include "ezstring.h"
 #include "ezcsl_port.h"
 
 #ifdef __cplusplus 
 extern "C" { 
 #endif 
 
+
+/* Ez Console */
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
 #define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
 #define EZ_PtoF(param) (*(float*)(param))       //ez_param_t => float
@@ -142,6 +143,45 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
+
+
+/* Ez Ringbuffer */
+#define RB_DATA_T unsigned char
+
+typedef enum{
+    RB_OK,
+    RB_ERR,
+    RB_FULL,
+    RB_EMPTY
+}rb_sta_t;
+
+typedef struct {  
+    RB_DATA_T *buffer;  
+    uint8_t len;
+    uint8_t head;    
+    uint8_t tail;    
+} ezrb_t;  
+
+extern ezrb_t *ezrb_create(uint8_t len);
+extern rb_sta_t ezrb_push(ezrb_t *cb,RB_DATA_T dat);
+extern rb_sta_t ezrb_pop(ezrb_t *cb,RB_DATA_T *dat);
+extern void ezrb_destroy(ezrb_t *cb);
+
+/* Ez String */
+#define EZSTR_OK 0
+#define EZSTR_ERR 1
+
+#define ezstr_ret_t char
+#define ezstr_size_t int
+
+extern ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
+extern ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src);
+extern ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
+extern ezstr_ret_t estrlen_s(const char *_Str,ezstr_size_t _Size);
+extern ezstr_size_t estrlen(const char *_Str);
+extern ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2);
+extern ezstr_ret_t estrncmp(const char *_Str1, const char *_Str2, ezstr_size_t _Size);
+extern char* estrtokc(char *_Str, char _Deli);
 
 
 

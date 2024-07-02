@@ -5,6 +5,7 @@
 /* your include end */
 
 void ezport_send_str(char *str, uint16_t len);
+void ezport_delay(uint16_t ms);
 
 
 
@@ -20,6 +21,22 @@ void ezport_send_str(char *str, uint16_t len)
     /** Write your code here ↓↓↓↓ */
     for (int i = 0; i < len; i++) {
         putchar(str[i]);
+    }
+    /** Write your code here ↑↑↑↑ */
+}
+
+
+
+/**
+ * @brief write your delay here
+ * if you use EzCsl in multithreading , this function must can suspend current task
+ * 
+ * @param ms 
+ */
+void ezport_delay(uint16_t ms)
+{
+    /** Write your code here ↓↓↓↓ */
+    for (int i = 0; i < ms; i++) {
     }
     /** Write your code here ↑↑↑↑ */
 }
