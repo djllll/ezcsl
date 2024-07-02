@@ -24,7 +24,6 @@ Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU ter
 |PARA_LEN_MAX    |Maximum number of parameters|
 |SPLIT_CHAR    |Split Character|
 |LOG_DEFINE    |Enable/Disable log level by macro|
-|LOCK_WAIT_DELAY()    |When EzCsl is in Multi-threadings , `LOCK_WAIT_DELAY()` to make self suspend|
 |USE_EZ_XMODEM    |Comment it to disable XMODEM|
 
 
@@ -46,4 +45,4 @@ autocomplete & prompt
 
 
 ## TODO
-1. Xmodem
+

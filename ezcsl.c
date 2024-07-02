@@ -1,6 +1,4 @@
 #include "ezcsl.h"
-#include "ezrb.h"
-#include "ezstring.h"
 #include "stdio.h"  // vsprintf
 #include "stdlib.h" // malloc
 
@@ -878,7 +876,7 @@ static ez_sta_t modem_start(void)
 #if USE_EZ_MODEM == EZ_YMODEM_1K
     uint8_t rev_file_info = 0;
     uint8_t eot_confirm = 0;
-#endif
+#endif 
 
     ezhdl.modem_p = 0;
     ezport_delay(3000);
@@ -988,4 +986,220 @@ static ez_sta_t modem_start(void)
     return EZ_OK;
 }
 
-#endif
+#endif /* USE_EZ_MODEM */
+
+
+/* ****************** ezrb ************* */
+ezrb_t *ezrb_create(uint8_t len);
+rb_sta_t ezrb_push(ezrb_t *cb, RB_DATA_T dat);
+rb_sta_t ezrb_pop(ezrb_t *cb, RB_DATA_T *dat);
+void ezrb_destroy(ezrb_t *cb);
+
+/**
+ * create a ringbuffer
+ * @author Jinlin Deng
+ */
+ezrb_t *ezrb_create(uint8_t len)
+{
+    if (len < 1) {
+        return NULL;
+    }
+    ezrb_t *rb = (ezrb_t *)malloc(sizeof(ezrb_t));
+    if (rb == NULL) {
+        return NULL;
+    }
+    rb->head = 0;
+    rb->tail = 0;
+    rb->len = len;
+    rb->buffer = (RB_DATA_T *)malloc(sizeof(RB_DATA_T) * len);
+    if (rb->buffer == NULL) {
+        ezrb_destroy(rb);
+        return NULL;
+    }
+    for (uint16_t i = 0; i < len; i++) {
+        rb->buffer[i] = 0;
+    }
+    return rb;
+}
+
+/**
+ * push the data to buffer
+ * @param  data :the data
+ * @author Jinlin Deng
+ */
+rb_sta_t ezrb_push(ezrb_t *rb, RB_DATA_T data)
+{
+    if (rb == NULL) {
+        return RB_ERR;
+    }
+    // buffer is full?
+    if (rb->tail + 1 == rb->head || (rb->tail+1 == rb->len && rb->head==0)) {
+        return RB_FULL;
+    }
+    // write
+    rb->buffer[rb->tail] = data;
+    rb->tail = rb->tail + 1 == rb->len ? 0 : rb->tail + 1;
+    return RB_OK;
+}
+
+/**
+ * get the data from buffer
+ * @param  rev :the data received
+ * @author Jinlin Deng
+ */
+rb_sta_t ezrb_pop(ezrb_t *rb, RB_DATA_T *rev)
+{
+    if (rb == NULL) {
+        return RB_ERR;
+    }
+    // buffer is empty ?
+    if (rb->head == rb->tail) {
+        return RB_EMPTY;
+    }
+    // read
+    RB_DATA_T data = rb->buffer[rb->head];
+    rb->head = rb->head + 1 == rb->len ? 0 :rb->head + 1;
+    *rev = data;
+    return RB_OK;
+}
+
+void ezrb_destroy(ezrb_t *rb)
+{
+    if (rb->buffer != NULL) {
+        free(rb->buffer);
+        rb->buffer = NULL;
+    }
+    if (rb != NULL) {
+        free(rb);
+        rb = NULL;
+    }
+}
+
+
+
+
+/* *********** ezstring ************* */
+
+
+#define EZSTR_OVERFLOW(s, lmt) \
+    if (++s >= lmt)      \
+        return EZSTR_ERR;
+
+ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
+ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src);
+ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
+ezstr_ret_t estrlen_s(const char *_Str,ezstr_size_t _Size);
+ezstr_size_t estrlen(const char *_Str);
+ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2);
+ezstr_ret_t estrncmp(const char *_Str1, const char *_Str2, ezstr_size_t _Size);
+char* estrtokc(char *_Str, char _Deli);
+
+
+ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
+{
+    ezstr_size_t s = 0;
+    char *tmp = _Dst;
+    while (*tmp != 0) {
+        EZSTR_OVERFLOW(s, _DstSize);
+        (void)*tmp++;
+    }
+    while (*_Src != 0) {
+        EZSTR_OVERFLOW(s, _DstSize);
+        *tmp++ = *_Src++;
+    }
+    *tmp = 0;
+    return EZSTR_OK;
+}
+ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src)
+{
+    ezstr_size_t s = 0;
+    char *tmp = _Dst;
+    while (*tmp != 0) {
+        EZSTR_OVERFLOW(s, _DstSize);
+        (void)*tmp++;
+    }
+    if(s+1>=_DstSize){
+        return EZSTR_ERR;
+    }
+    *tmp = _Src;
+    *(tmp+1) = 0; 
+    return EZSTR_OK;
+}
+
+ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
+{
+    ezstr_size_t s = 0;
+    while (*_Src != 0) {
+        EZSTR_OVERFLOW(s, _DstSize);
+        *_Dst++ = *_Src++;
+    }
+    *_Dst=0;
+    return EZSTR_OK;
+}
+
+ezstr_ret_t estrlen_s(const char *_Str, ezstr_size_t _Size)
+{
+    ezstr_size_t s = 0;
+    while (*_Str != 0) {
+        if (++s >= _Size)
+            return _Size;
+        _Str++;
+    }
+    return s;
+}
+
+
+ezstr_size_t estrlen(const char *_Str)
+{
+    ezstr_size_t s = 0;
+    while (*_Str != 0) {
+        s++;
+        _Str++;
+    }
+    return s;
+}
+
+ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2){
+    while (*_Str1 == *_Str2)
+	{
+		if (*_Str1 == '\0')
+		{
+			return EZSTR_OK;
+		}
+		_Str1++;
+		_Str2++;
+	}
+    return EZSTR_ERR;
+}
+
+ezstr_ret_t estrncmp(const char *_Str1, const char *_Str2, ezstr_size_t _Size)
+{
+    ezstr_size_t s = 0;
+    while (*_Str1 == *_Str2) {
+        if (++s >= _Size) {
+            return EZSTR_OK;
+        }
+        _Str1++;
+        _Str2++;
+    }
+    return EZSTR_ERR;
+}
+
+
+char *estrtokc(char *_Str, char _Deli)
+{
+    static char *tmp = NULL;
+    if (_Str == NULL) {
+        _Str = tmp;
+    }
+    char *search = _Str;
+    while (*search != _Deli) {
+        if (*search == 0) {
+            return NULL;
+        }
+        search++;
+    }
+    *search = 0;
+    tmp = search + 1;
+    return _Str;
+}
