@@ -28,7 +28,7 @@ Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU ter
 
 
 # Example 
-The code in this repository can work in Win10
+The code in this repository can work on Win
 
 ## How to run this example
 1. clone this repo
