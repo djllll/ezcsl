@@ -37,12 +37,14 @@ The code in this repository can work on Win
 4. `./example`
 
 ## screenshot
-welcome
+welcome  
 ![](./screenshot/welcome.png)
 
-autocomplete & prompt
+autocomplete & prompt  
 ![](./screenshot/autocomplete.gif)
 
+## How to make a welcome-message?  
+[Text to ASCII Art Generator](https://patorjk.com/software/taag/)  
 
 ## TODO
 
