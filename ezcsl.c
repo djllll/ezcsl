@@ -7,6 +7,8 @@
 #define XYMODEM_BUF_LEN 135
 #elif USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
+#else
+#define XYMODEM_BUF_LEN 1
 #endif
 
 
@@ -140,12 +142,16 @@ static void ezcsl_reset_empty(void)
  */
 void ezport_receive_a_char(char c)
 {
+#if(USE_EZ_MODEM!=EZ_XMODEM_NONE)
     if (ezhdl.modem_start_flag == 0) {
         ezrb_push(ezhdl.rb, (uint8_t)c);
     } else {
         ezhdl.modem_buf[ezhdl.modem_p] = (uint8_t)c;
         if(ezhdl.modem_p<XYMODEM_BUF_LEN-1)ezhdl.modem_p++;
     }
+#else
+    ezrb_push(ezhdl.rb, (uint8_t)c);
+#endif
 }
 
 

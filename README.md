@@ -24,7 +24,7 @@ Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU ter
 |PARA_LEN_MAX    |Maximum number of parameters|
 |SPLIT_CHAR    |Split Character|
 |LOG_DEFINE    |Enable/Disable log level by macro|
-|USE_EZ_XMODEM    |Comment it to disable XMODEM|
+|USE_EZ_XMODEM    |choose MODEM|
 
 
 # Example 
