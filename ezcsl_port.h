@@ -30,7 +30,7 @@ extern void ezport_receive_a_char(char c);
 #define PARA_LEN_MAX    5
 #define SPLIT_CHAR      ','
 #define LOG_DEFINE      LOG_LEVEL_ALL // log level define
-#define USE_EZ_MODEM    EZ_XMODEM_128
+#define USE_EZ_MODEM    EZ_NO_MODEM
 
 #ifdef __cplusplus 
 }
