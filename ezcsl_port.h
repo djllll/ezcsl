@@ -12,8 +12,9 @@ extern "C" {
 #define LOG_LEVEL_D    0x08
 #define LOG_LEVEL_ALL  0xff
 #define LOG_LEVEL_NONE 0x00
-#define EZ_XMODEM_128  1
-#define EZ_YMODEM_1K   2
+
+#define EZ_NO_MODEM    0x00
+#define EZ_YMODEM_1K   0x01
 
 /* Ez Port */
 typedef unsigned short uint16_t;

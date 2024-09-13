@@ -3,9 +3,7 @@
 #include "stdlib.h" // malloc
 
 
-#if USE_EZ_MODEM == EZ_XMODEM_128
-#define XYMODEM_BUF_LEN 135
-#elif USE_EZ_MODEM == EZ_YMODEM_1K
+#if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
 #endif
 
@@ -895,40 +893,7 @@ static ez_sta_t modem_start(void)
             timeout = 0;
             bufp_last_time_out = ezhdl.modem_p;
 
-#if USE_EZ_MODEM == EZ_XMODEM_128
-            if (ezhdl.modem_buf[0] == XYM_SOH && ezhdl.modem_p == 133) { // frame size
-                if (ezhdl.modem_buf[1] == (uint8_t)(last_packet_num + 1) && ezhdl.modem_buf[1] == (uint8_t)(~ezhdl.modem_buf[2])) {
-                    if (crc16_modem(ezhdl.modem_buf + 3, 128) == ((uint16_t)(ezhdl.modem_buf[131] << 8) | ezhdl.modem_buf[132])) {
-                        ezhdl.modem_p = 0;
-                        switch (ezhdl.modem_cb((char *)ezhdl.modem_buf + 3, 128)) {
-                        case M_SEND_NEXT:
-                            last_packet_num++;
-                            modem_reply(XYM_ACK);
-                            break;
-                        case M_SEND_REPEAT:
-                            modem_reply(XYM_NAK);
-                            break;
-                        case M_SEND_ABORT:
-                        default:
-                            modem_reply(XYM_CAN);
-                            break;
-                        };
-                    } else {
-                        /* repeat when crc wrong */
-                        modem_reply(XYM_NAK);
-                    }
-                } else {
-                    /* abort when frame goes wrong */
-                    modem_reply(XYM_CAN);
-                    return EZ_ERR;
-                }
-            } else if (ezhdl.modem_p == 1 && ezhdl.modem_buf[0] == XYM_EOT) {
-                ezhdl.modem_p = 0;
-                modem_reply(XYM_ACK);
-                ezhdl.modem_cb(NULL, 0);
-                return EZ_OK;
-            }
-#elif USE_EZ_MODEM == EZ_YMODEM_1K
+#if USE_EZ_MODEM == EZ_YMODEM_1K
             if (ezhdl.modem_buf[0] == XYM_SOH) {
                 frame_size = 128; // 128+5
             } else if (ezhdl.modem_buf[0] == XYM_STX) {
@@ -944,6 +909,12 @@ static ez_sta_t modem_start(void)
                     modem_reply(XYM_C);
                     ezhdl.modem_cb(NULL, 0);
                     return EZ_OK;
+                }
+            }else{
+                ezport_delay(1);
+                timeout++;
+                if (timeout > 3000) {
+                    return EZ_ERR;
                 }
             }
             if (ezhdl.modem_p == frame_size + 5 && frame_size != 0) {
