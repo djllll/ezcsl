@@ -12,8 +12,9 @@ extern "C" {
 #define LOG_LEVEL_D    0x08
 #define LOG_LEVEL_ALL  0xff
 #define LOG_LEVEL_NONE 0x00
-#define EZ_XMODEM_128  1
-#define EZ_YMODEM_1K   2
+
+#define EZ_NO_MODEM    0x00
+#define EZ_YMODEM_1K   0x01
 
 /* Ez Port */
 typedef unsigned short uint16_t;
@@ -29,7 +30,7 @@ extern void ezport_receive_a_char(char c);
 #define PARA_LEN_MAX    5
 #define SPLIT_CHAR      ','
 #define LOG_DEFINE      LOG_LEVEL_ALL // log level define
-#define USE_EZ_MODEM    EZ_XMODEM_128
+#define USE_EZ_MODEM    EZ_NO_MODEM
 
 #ifdef __cplusplus 
 }

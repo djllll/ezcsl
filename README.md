@@ -24,11 +24,11 @@ Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU ter
 |PARA_LEN_MAX    |Maximum number of parameters|
 |SPLIT_CHAR    |Split Character|
 |LOG_DEFINE    |Enable/Disable log level by macro|
-|USE_EZ_XMODEM    |Comment it to disable XMODEM|
+|USE_EZ_XMODEM    |choose MODEM|
 
 
 # Example 
-The code in this repository can work in Win10
+The code in this repository can work on Win
 
 ## How to run this example
 1. clone this repo
@@ -37,12 +37,14 @@ The code in this repository can work in Win10
 4. `./example`
 
 ## screenshot
-welcome
+welcome  
 ![](./screenshot/welcome.png)
 
-autocomplete & prompt
+autocomplete & prompt  
 ![](./screenshot/autocomplete.gif)
 
+## How to make a welcome-message?  
+[Text to ASCII Art Generator](https://patorjk.com/software/taag/)  
 
 ## TODO
 
