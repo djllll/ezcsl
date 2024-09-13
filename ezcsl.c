@@ -5,8 +5,6 @@
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
-#else
-#define XYMODEM_BUF_LEN 1
 #endif
 
 
