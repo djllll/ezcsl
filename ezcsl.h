@@ -144,15 +144,14 @@ extern void ezcsl_printf(const char *fmt, ...);
 #endif
 
 #if (LOG_DEFINE & LOG_LEVEL_PRT)
-#define EZ_PRT(TAG, format, ...)                                                    \
-    do {                                                                            \
-        ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
-        ezcsl_reset_prefix();                                                       \
+#define EZ_PRT(format, ...)                  \
+    do {                                     \
+        ezcsl_printf(format, ##__VA_ARGS__); \
     } while (0)
 #else
-#define EZ_PRT(TAG, format, ...) \
-    {                            \
-        ;                        \
+#define EZ_PRT(format, ...) \
+    {                       \
+        ;                   \
     }
 #endif
 
