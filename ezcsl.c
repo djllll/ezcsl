@@ -78,8 +78,6 @@ static struct EzCslHandleStruct {
 void ezport_receive_a_char(char c);
 
 void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw);
-void ezcsl_log_level_set(ez_log_level_mask_t mask);
-uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
 void ezcsl_deinit(void);
 uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
@@ -183,7 +181,6 @@ void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 
     ezhdl.rb = ezrb_create(CSL_BUF_LEN / 2);
 
-    ezcsl_log_level_set(LOG_LEVEL_ALL);
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?", "help", 0, ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit, 0, NULL, NULL, "");
     ezport_send_str((char *)welcome, estrlen(welcome));
@@ -192,25 +189,7 @@ void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 }
 
 
-/**
- * @brief set loglevel
- *
- * @param mask
- */
-void ezcsl_log_level_set(ez_log_level_mask_t mask)
-{
-    ezhdl.log_level_mask = mask;
-}
 
-/**
- * @brief log level get
- *
- * @return ez_log_level_mask_t
- */
-uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask)
-{
-    return (ezhdl.log_level_mask & mask);
-}
 
 
 /**

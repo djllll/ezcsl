@@ -91,10 +91,10 @@ extern void ezcsl_printf(const char *fmt, ...);
 
 #if (LOG_DEFINE & LOG_LEVEL_E)
 #define EZ_LOGE(TAG, format, ...)                                                                \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_E)) {                                                  \
+    do {                                                                                         \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_RED("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                    \
-    }
+    } while (0)
 #else
 #define EZ_LOGE(TAG, format, ...) \
     {                             \
@@ -105,10 +105,10 @@ extern void ezcsl_printf(const char *fmt, ...);
 
 #if (LOG_DEFINE & LOG_LEVEL_I)
 #define EZ_LOGI(TAG, format, ...)                                                                  \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_I)) {                                                    \
+    do {                                                                                           \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_GREEN("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                      \
-    }
+    } while (0)
 #else
 #define EZ_LOGI(TAG, format, ...) \
     {                             \
@@ -119,10 +119,10 @@ extern void ezcsl_printf(const char *fmt, ...);
 
 #if (LOG_DEFINE & LOG_LEVEL_D)
 #define EZ_LOGD(TAG, format, ...)                                                                 \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_D)) {                                                   \
+    do {                                                                                          \
         ezcsl_printf(MOVE_CURSOR_ABS(0) COLOR_L_BLUE("[" TAG "] " format "\r\n"), ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                                     \
-    }
+    } while (0)
 #else
 #define EZ_LOGD(TAG, format, ...) \
     {                             \
@@ -132,10 +132,10 @@ extern void ezcsl_printf(const char *fmt, ...);
 
 #if (LOG_DEFINE & LOG_LEVEL_V)
 #define EZ_LOGV(TAG, format, ...)                                                   \
-    if (ezcsl_log_level_allowed(LOG_LEVEL_V)) {                                     \
+    do {                                                                            \
         ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
         ezcsl_reset_prefix();                                                       \
-    }
+    } while (0)
 #else
 #define EZ_LOGV(TAG, format, ...) \
     {                             \
@@ -143,6 +143,18 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
+#if (LOG_DEFINE & LOG_LEVEL_PRT)
+#define EZ_PRT(TAG, format, ...)                                                    \
+    do {                                                                            \
+        ezcsl_printf(MOVE_CURSOR_ABS(0) "[" TAG "] " format "\r\n", ##__VA_ARGS__); \
+        ezcsl_reset_prefix();                                                       \
+    } while (0)
+#else
+#define EZ_PRT(TAG, format, ...) \
+    {                            \
+        ;                        \
+    }
+#endif
 
 
 /* Ez Ringbuffer */
