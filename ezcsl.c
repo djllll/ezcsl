@@ -2,6 +2,7 @@
 #include "stdio.h"  // vsprintf
 #include "stdlib.h" // malloc
 
+#define EZCSL_VERSION "v1.0.0"
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
@@ -184,7 +185,7 @@ void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?", "help", 0, ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit, 0, NULL, NULL, "");
     ezport_send_str((char *)welcome, estrlen(welcome));
-    ezcsl_printf("you can input '?' for help\r\n");
+    ezcsl_printf("you can input '?' for help ("EZCSL_VERSION")\r\n");
     ezcsl_reset_prefix();
 }
 
