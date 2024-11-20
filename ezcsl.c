@@ -2,11 +2,10 @@
 #include "stdio.h"  // vsprintf
 #include "stdlib.h" // malloc
 
+#define EZCSL_VERSION "v1.0.0"
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
-#else
-#define XYMODEM_BUF_LEN 1
 #endif
 
 
@@ -80,8 +79,6 @@ static struct EzCslHandleStruct {
 void ezport_receive_a_char(char c);
 
 void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw);
-void ezcsl_log_level_set(ez_log_level_mask_t mask);
-uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask);
 void ezcsl_deinit(void);
 uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
@@ -145,9 +142,10 @@ void ezport_receive_a_char(char c)
         ezrb_push(ezhdl.rb, (uint8_t)c);
     } else {
         ezhdl.modem_buf[ezhdl.modem_p] = (uint8_t)c;
-        if(ezhdl.modem_p<XYMODEM_BUF_LEN-1)ezhdl.modem_p++;
+        if (ezhdl.modem_p < XYMODEM_BUF_LEN - 1)
+            ezhdl.modem_p++;
     }
-#else 
+#else
     ezrb_push(ezhdl.rb, (uint8_t)c);
 #endif
 }
@@ -184,34 +182,15 @@ void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 
     ezhdl.rb = ezrb_create(CSL_BUF_LEN / 2);
 
-    ezcsl_log_level_set(LOG_LEVEL_ALL);
     ez_cmd_unit_t *unit = ezcsl_cmd_unit_create("?", "help", 0, ezcsl_cmd_help_callback);
     ezcsl_cmd_register(unit, 0, NULL, NULL, "");
     ezport_send_str((char *)welcome, estrlen(welcome));
-    ezcsl_printf("you can input '?' for help\r\n");
+    ezcsl_printf("you can input '?' for help ("EZCSL_VERSION")\r\n");
     ezcsl_reset_prefix();
 }
 
 
-/**
- * @brief set loglevel
- *
- * @param mask
- */
-void ezcsl_log_level_set(ez_log_level_mask_t mask)
-{
-    ezhdl.log_level_mask = mask;
-}
 
-/**
- * @brief log level get
- *
- * @return ez_log_level_mask_t
- */
-uint8_t ezcsl_log_level_allowed(ez_log_level_mask_t mask)
-{
-    return (ezhdl.log_level_mask & mask);
-}
 
 
 /**
@@ -813,8 +792,8 @@ static void next_history_to_buf(void)
 }
 
 
-/************************** X/Ymodem ************************************/
-#if USE_EZ_MODEM != 0
+/************************** Ymodem ************************************/
+#if USE_EZ_MODEM == EZ_YMODEM_1K
 
 #define XYM_SOH 0x01
 #define XYM_STX 0x02
@@ -877,10 +856,8 @@ static ez_sta_t modem_start(void)
     uint16_t timeout = 0;
     uint16_t bufp_last_time_out = 0; // timeout
     uint8_t last_packet_num = 0;
-#if USE_EZ_MODEM == EZ_YMODEM_1K
     uint8_t rev_file_info = 0;
     uint8_t eot_confirm = 0;
-#endif 
 
     ezhdl.modem_p = 0;
     ezport_delay(3000);
@@ -899,7 +876,6 @@ static ez_sta_t modem_start(void)
             timeout = 0;
             bufp_last_time_out = ezhdl.modem_p;
 
-#if USE_EZ_MODEM == EZ_YMODEM_1K
             if (ezhdl.modem_buf[0] == XYM_SOH) {
                 frame_size = 128; // 128+5
             } else if (ezhdl.modem_buf[0] == XYM_STX) {
@@ -907,7 +883,7 @@ static ez_sta_t modem_start(void)
             } else if (ezhdl.modem_p == 1 && ezhdl.modem_buf[0] == XYM_EOT) {
                 ezhdl.modem_p = 0;
                 if (eot_confirm == 0) {
-									  ezport_delay(1000);
+                    ezport_delay(1000);
                     modem_reply(XYM_NAK);
                     eot_confirm = 1;
                 } else {
@@ -916,7 +892,7 @@ static ez_sta_t modem_start(void)
                     ezhdl.modem_cb(NULL, 0);
                     return EZ_OK;
                 }
-            }else{
+            } else {
                 ezport_delay(1);
                 timeout++;
                 if (timeout > 3000) {
@@ -929,14 +905,14 @@ static ez_sta_t modem_start(void)
                     if (crc16_modem(ezhdl.modem_buf + 3, frame_size) == ((uint16_t)(ezhdl.modem_buf[frame_size + 3] << 8) | ezhdl.modem_buf[frame_size + 4])) {
                         switch (ezhdl.modem_cb((char *)ezhdl.modem_buf + 3, frame_size)) {
                         case M_SEND_NEXT:
-													last_packet_num++;
-													if(rev_file_info == 0){
-													  rev_file_info =1;
-														modem_reply(XYM_ACK);
-                            modem_reply(XYM_C);
-													}else{  
-                            modem_reply(XYM_ACK);
-													}
+                            last_packet_num++;
+                            if (rev_file_info == 0) {
+                                rev_file_info = 1;
+                                modem_reply(XYM_ACK);
+                                modem_reply(XYM_C);
+                            } else {
+                                modem_reply(XYM_ACK);
+                            }
 
                             break;
                         case M_SEND_REPEAT:
@@ -957,7 +933,6 @@ static ez_sta_t modem_start(void)
                     return EZ_ERR;
                 }
             }
-#endif
         }
     }
     return EZ_OK;
@@ -1010,7 +985,7 @@ rb_sta_t ezrb_push(ezrb_t *rb, RB_DATA_T data)
         return RB_ERR;
     }
     // buffer is full?
-    if (rb->tail + 1 == rb->head || (rb->tail+1 == rb->len && rb->head==0)) {
+    if (rb->tail + 1 == rb->head || (rb->tail + 1 == rb->len && rb->head == 0)) {
         return RB_FULL;
     }
     // write
@@ -1035,7 +1010,7 @@ rb_sta_t ezrb_pop(ezrb_t *rb, RB_DATA_T *rev)
     }
     // read
     RB_DATA_T data = rb->buffer[rb->head];
-    rb->head = rb->head + 1 == rb->len ? 0 :rb->head + 1;
+    rb->head = rb->head + 1 == rb->len ? 0 : rb->head + 1;
     *rev = data;
     return RB_OK;
 }
@@ -1053,23 +1028,21 @@ void ezrb_destroy(ezrb_t *rb)
 }
 
 
-
-
 /* *********** ezstring ************* */
 
 
 #define EZSTR_OVERFLOW(s, lmt) \
-    if (++s >= lmt)      \
+    if (++s >= lmt)            \
         return EZSTR_ERR;
 
 ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
 ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src);
 ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src);
-ezstr_ret_t estrlen_s(const char *_Str,ezstr_size_t _Size);
+ezstr_ret_t estrlen_s(const char *_Str, ezstr_size_t _Size);
 ezstr_size_t estrlen(const char *_Str);
-ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2);
+ezstr_ret_t estrcmp(const char *_Str1, const char *_Str2);
 ezstr_ret_t estrncmp(const char *_Str1, const char *_Str2, ezstr_size_t _Size);
-char* estrtokc(char *_Str, char _Deli);
+char *estrtokc(char *_Str, char _Deli);
 
 
 ezstr_ret_t estrcat_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
@@ -1095,11 +1068,11 @@ ezstr_ret_t estrcatc_s(char *_Dst, ezstr_size_t _DstSize, char _Src)
         EZSTR_OVERFLOW(s, _DstSize);
         (void)*tmp++;
     }
-    if(s+1>=_DstSize){
+    if (s + 1 >= _DstSize) {
         return EZSTR_ERR;
     }
     *tmp = _Src;
-    *(tmp+1) = 0; 
+    *(tmp + 1) = 0;
     return EZSTR_OK;
 }
 
@@ -1110,7 +1083,7 @@ ezstr_ret_t estrcpy_s(char *_Dst, ezstr_size_t _DstSize, const char *_Src)
         EZSTR_OVERFLOW(s, _DstSize);
         *_Dst++ = *_Src++;
     }
-    *_Dst=0;
+    *_Dst = 0;
     return EZSTR_OK;
 }
 
@@ -1136,16 +1109,15 @@ ezstr_size_t estrlen(const char *_Str)
     return s;
 }
 
-ezstr_ret_t estrcmp(const char* _Str1,const char* _Str2){
-    while (*_Str1 == *_Str2)
-	{
-		if (*_Str1 == '\0')
-		{
-			return EZSTR_OK;
-		}
-		_Str1++;
-		_Str2++;
-	}
+ezstr_ret_t estrcmp(const char *_Str1, const char *_Str2)
+{
+    while (*_Str1 == *_Str2) {
+        if (*_Str1 == '\0') {
+            return EZSTR_OK;
+        }
+        _Str1++;
+        _Str2++;
+    }
     return EZSTR_ERR;
 }
 

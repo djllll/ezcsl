@@ -6,12 +6,13 @@ extern "C" {
 #endif 
 
 /* Ez Macro */
-#define LOG_LEVEL_V    0x01
-#define LOG_LEVEL_E    0x02
-#define LOG_LEVEL_I    0x04
-#define LOG_LEVEL_D    0x08
-#define LOG_LEVEL_ALL  0xff
-#define LOG_LEVEL_NONE 0x00
+#define LOG_LEVEL_PRT       0x01
+#define LOG_LEVEL_V         0x02
+#define LOG_LEVEL_E         0x04
+#define LOG_LEVEL_I         0x08
+#define LOG_LEVEL_D         0x10
+#define LOG_LEVEL_ALL       0xff
+#define LOG_LEVEL_NONE      0x00
 
 #define EZ_NO_MODEM    0x00
 #define EZ_YMODEM_1K   0x01
