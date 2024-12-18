@@ -59,6 +59,9 @@ static struct EzCslHandleStruct {
     const char *sudo_psw;
     uint8_t sudo_checked;
     uint8_t psw_inputing;
+
+    /* occupy */
+    uint8_t csl_occupied;
 } ezhdl;
 
 
@@ -99,11 +102,11 @@ static void next_history_to_buf(void);
 
 static ez_cmd_t *cmd_head = NULL;
 static ez_cmd_unit_t *cmd_unit_head = NULL;
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *));
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *));
 ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc);
 
 /* ez inner cmd */
-static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
+static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
 
 
 /**
@@ -146,7 +149,11 @@ void ezport_receive_a_char(char c)
             ezhdl.modem_p++;
     }
 #else
-    ezrb_push(ezhdl.rb, (uint8_t)c);
+    if(ezhdl.csl_occupied && IS_CTRL_C(c)){
+        ezhdl.csl_occupied=0;
+    }else{
+        ezrb_push(ezhdl.rb, (uint8_t)c);
+    }
 #endif
 }
 
@@ -329,6 +336,7 @@ uint8_t ezcsl_tick(void)
                 /* enter */
                 ezhdl.buf[ezhdl.bufl] = 0; // cmd end
                 if (!ezhdl.psw_inputing) {
+                    buf_to_history();
                     ezcsl_submit();
                 } else {
                     if (estrcmp(ezhdl.sudo_psw, ezhdl.buf) == 0) {
@@ -425,7 +433,6 @@ static void ezcsl_submit(void)
     char *a_split;
     uint8_t split_cnt = 0;
 
-    buf_to_history();
 
     if (ezhdl.bufl > CSL_BUF_LEN - 1) {
         ezhdl.bufl = CSL_BUF_LEN - 1;
@@ -492,7 +499,30 @@ static void ezcsl_submit(void)
                             break;
                         }
                     }
-                    cmd_p->unit->callback(cmd_p->id, para); // user can use `ezcsl_printf` in callback
+
+                    /**** execute start ****/
+                    while (1) {
+                        ez_cmd_ret_t ret = cmd_p->unit->callback(cmd_p->id, para); // user can use `ezcsl_printf` in callback
+                        if (ret == CMD_FINISH) {
+                            break;
+                        } else {
+                            uint16_t timeout_cnt = 0;
+                            uint8_t timeout_exit = 0;
+                            ezhdl.csl_occupied = 1;
+                            while (timeout_cnt < (uint16_t)ret) {
+                                ezport_delay(10);
+                                timeout_cnt += 10;
+                                if (!ezhdl.csl_occupied) {
+                                    timeout_exit = 1;
+                                }
+                            }
+                            if(timeout_exit){
+                                break;
+                            }
+                        }
+                    }
+                    /**** execute end ****/
+
                 } else {
                     ezcsl_printf("\033[31mCmd Error!\033[m %s,%s", maintitle, subtitle);
                     for (uint8_t i = 0; i < cmd_p->para_num; i++) {
@@ -603,11 +633,15 @@ static void ezcsl_tabcomplete(void)
 
 
 /**
- * create a cmd unit
- * @param title_main main title ,cannot null or '' ,length < 10
- * @author Jinlin Deng
+ * @brief create cmd unit
+ * 
+ * @param title_main 
+ * @param describe 
+ * @param need_sudo NSUDO or SUDO
+ * @param callback 
+ * @return ez_cmd_unit_t* 
  */
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *))
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *))
 {
     LOCK();
     if (estrlen(title_main) == 0 || estrlen(title_main) >= 10 || callback == NULL) {
@@ -695,7 +729,7 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
  * @param id cmd id
  * @param para param
  */
-static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
+static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 {
     ez_cmd_unit_t *p = cmd_unit_head;
     ezcsl_printf(COLOR_GREEN("Main Command & Description List") " \r\n");
@@ -705,6 +739,7 @@ static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
         p = p->next;
     }
     ezcsl_printf(COLOR_GREEN("=========================") " \r\n");
+    return CMD_FINISH;
 }
 
 

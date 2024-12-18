@@ -2,6 +2,7 @@
 
 /* your include begin */
 #include "stdio.h"
+
 /* your include end */
 
 void ezport_send_str(char *str, uint16_t len);
@@ -36,7 +37,7 @@ void ezport_send_str(char *str, uint16_t len)
 void ezport_delay(uint16_t ms)
 {
     /** Write your code here ↓↓↓↓ */
-    for (int i = 0; i < ms; i++) {
+    for (int i = 0; i < (long)ms*1000; i++) {
     }
     /** Write your code here ↑↑↑↑ */
 }
