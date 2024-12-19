@@ -31,10 +31,10 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case TEST_ADD2_ID:
-        EZ_PRT("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
+        EZ_PRTL("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
         break;
     case TEST_ADD3_ID:
-        EZ_PRT("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
+        EZ_PRTL("result is %d\r\n", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
         break;
     default:
         break;
@@ -49,15 +49,15 @@ ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
         EZ_LOGE("test", "your input is none ");
         break;
     case ECHO_ONE_ID:
-        EZ_PRT("your input :%d\r\n", EZ_PtoI(para[0]));
+        EZ_PRTL("your input :%d\r\n", EZ_PtoI(para[0]));
         break;
     case ECHO_MUL_ID:
-        EZ_PRT("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]), EZ_PtoF(para[1]), EZ_PtoI(para[2]));
+        EZ_PRTL("your input :%s f:%f i:%d\r\n", EZ_PtoS(para[0]), EZ_PtoF(para[1]), EZ_PtoI(para[2]));
         break;
     case ECHO_TIME_ID: {
         time_t now_time;
         time(&now_time);
-        EZ_PRT("=> %s", ctime(&now_time));
+        EZ_PRTL("=> %s", ctime(&now_time));
         return CMD_TIMEOUT_1000MS_AGAIN;
     } break;
     default:
