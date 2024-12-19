@@ -893,7 +893,7 @@ static uint16_t crc16_modem(uint8_t *data, uint16_t length)
 static void modem_reply(uint8_t reply)
 {
     uint8_t sendbuf;
-    ezport_delay(1);
+    ezport_delay(10);
     sendbuf = reply;
     ezport_send_str((char *)&sendbuf, 1);
 }
@@ -995,6 +995,7 @@ static ez_sta_t modem_start(void)
             }
         }
     }
+    ezport_delay(1000); //
     return ret;
 }
 
