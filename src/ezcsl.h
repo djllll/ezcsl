@@ -156,7 +156,7 @@ extern void ezcsl_printf(const char *fmt, ...);
 #if (LOG_DEFINE & LOG_LEVEL_PRT)
 #define EZ_PRT(format, ...)                  \
     do {                                     \
-        ezcsl_printf(format, ##__VA_ARGS__); \
+        ezcsl_printf(MOVE_CURSOR_ABS(0)format, ##__VA_ARGS__); \
     } while (0)
 #else
 #define EZ_PRT(format, ...) \

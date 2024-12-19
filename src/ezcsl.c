@@ -51,7 +51,7 @@ static struct EzCslHandleStruct {
 #if USE_EZ_MODEM != 0
     uint8_t modem_start_flag;
     uint8_t modem_buf[XYMODEM_BUF_LEN];
-    volatile uint16_t modem_p;
+    uint16_t modem_p;
     const char *modem_prefix;
     modem_rev_func_t (*modem_cb)(char *, uint16_t);
 #endif
@@ -136,23 +136,23 @@ static void ezcsl_reset_empty(void)
 
 /**
  * @param  c the char from input
- * @author Jinlin Deng
  */
 void ezport_receive_a_char(char c)
 {
 #if USE_EZ_MODEM != 0
     if (ezhdl.modem_start_flag == 0) {
-        ezrb_push(ezhdl.rb, (uint8_t)c);
+#endif
+        if (ezhdl.csl_occupied && IS_CTRL_C(c)) {
+            ezhdl.csl_occupied = 0;
+        } else {
+            ezrb_push(ezhdl.rb, (uint8_t)c);
+        }
+#if USE_EZ_MODEM != 0
+        ezhdl.modem_p = 0;
     } else {
         ezhdl.modem_buf[ezhdl.modem_p] = (uint8_t)c;
         if (ezhdl.modem_p < XYMODEM_BUF_LEN - 1)
             ezhdl.modem_p++;
-    }
-#else
-    if(ezhdl.csl_occupied && IS_CTRL_C(c)){
-        ezhdl.csl_occupied=0;
-    }else{
-        ezrb_push(ezhdl.rb, (uint8_t)c);
     }
 #endif
 }
@@ -268,7 +268,8 @@ void ezcsl_deinit(void)
 
 /**
  * @brief call it in a loop
- *
+ * 
+ * @return uint8_t can be ignored if you donnot want to exit
  */
 uint8_t ezcsl_tick(void)
 {
@@ -334,8 +335,17 @@ uint8_t ezcsl_tick(void)
                 }
             } else if (IS_ENTER(c)) {
                 /* enter */
-                ezhdl.buf[ezhdl.bufl] = 0; // cmd end
+                ezhdl.buf[ezhdl.bufl] = '\0'; // cmd end
                 if (!ezhdl.psw_inputing) {
+                    // trip end spaces
+                    while(ezhdl.bufl>1){
+                        if(ezhdl.buf[ezhdl.bufl-1]==' '){
+                            ezhdl.buf[ezhdl.bufl - 1] = '\0';
+                            ezhdl.bufl--;
+                        } else {
+                            break;
+                        }
+                    }
                     buf_to_history();
                     ezcsl_submit();
                 } else {
@@ -524,7 +534,7 @@ static void ezcsl_submit(void)
                     /**** execute end ****/
 
                 } else {
-                    ezcsl_printf("\033[31mCmd Error!\033[m %s,%s", maintitle, subtitle);
+                    ezcsl_printf("\033[31mWrong format!\033[m %s,%s", maintitle, subtitle);
                     for (uint8_t i = 0; i < cmd_p->para_num; i++) {
                         ezcsl_printf(",<%s>", EXPAND_DESC(cmd_p->para_desc[i]));
                     }
@@ -684,7 +694,6 @@ ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describ
  * @param title_sub sub title ,can set null
  * @param describe describe your cmd
  * @param para_desc the description of parameters your cmd need,s->string,i->int,f->float
- * @author Jinlin Deng
  * @return register result
  */
 ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc)
@@ -747,7 +756,6 @@ static uint8_t last_load_hist = 0; // ugly flag...
 /**
  * move the buf to history
  * @param
- * @author Jinlin Deng
  */
 static void buf_to_history(void)
 {
@@ -768,7 +776,6 @@ static void buf_to_history(void)
 
 /**
  * move history to buf
- * @author Jinlin Deng
  */
 static uint8_t load_history(void)
 {
@@ -841,8 +848,11 @@ static void next_history_to_buf(void)
 
 /**
  * @brief modem init (optional),if you need modem,call this after `ezcsl_init`
- *
- * @param modem_prefix
+ * 
+ * @param modem_prefix 
+ * @param cb_func callback from modem,
+ *      @param char* buffer pointer
+ *      @param uint16_t buffer length
  */
 void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *, uint16_t))
 {
@@ -850,6 +860,14 @@ void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char 
     ezhdl.modem_cb = cb_func;
 }
 
+
+/**
+ * @brief modem crc16
+ * 
+ * @param data 
+ * @param length 
+ * @return uint16_t 
+ */
 static uint16_t crc16_modem(uint8_t *data, uint16_t length)
 {
     uint16_t crc = 0;
@@ -894,51 +912,57 @@ static ez_sta_t modem_start(void)
     uint8_t rev_file_info = 0;
     uint8_t eot_confirm = 0;
 
-    ezhdl.modem_p = 0;
+    /* set receive buffer */
     ezport_delay(3000);
-
     modem_reply(XYM_C);
 
     /* start receiving */
+    ez_sta_t ret = EZ_ERR;
     while (1) {
         if (bufp_last_time_out == ezhdl.modem_p) {
             ezport_delay(1);
             timeout++;
             if (timeout > 3000) {
-                return EZ_ERR;
+                ret = EZ_ERR;
+                break;
             }
         } else {
-            timeout = 0;
             bufp_last_time_out = ezhdl.modem_p;
 
             if (ezhdl.modem_buf[0] == XYM_SOH) {
+                timeout = 0;
                 frame_size = 128; // 128+5
             } else if (ezhdl.modem_buf[0] == XYM_STX) {
+                timeout = 0;
                 frame_size = 1024; // 1024+5
             } else if (ezhdl.modem_p == 1 && ezhdl.modem_buf[0] == XYM_EOT) {
+                timeout = 0;
                 ezhdl.modem_p = 0;
                 if (eot_confirm == 0) {
                     ezport_delay(1000);
                     modem_reply(XYM_NAK);
                     eot_confirm = 1;
                 } else {
+                    ezport_delay(1000);
                     modem_reply(XYM_ACK);
                     modem_reply(XYM_C);
                     ezhdl.modem_cb(NULL, 0);
-                    return EZ_OK;
+                    ret = EZ_OK;
+                    break;
                 }
             } else {
                 ezport_delay(1);
                 timeout++;
                 if (timeout > 3000) {
-                    return EZ_ERR;
+                    ret = EZ_ERR;
+                    break;
                 }
             }
             if (ezhdl.modem_p == frame_size + 5 && frame_size != 0) {
                 ezhdl.modem_p = 0;
                 if (ezhdl.modem_buf[1] == (uint8_t)(last_packet_num) && ezhdl.modem_buf[1] == (uint8_t)(~ezhdl.modem_buf[2])) {
                     if (crc16_modem(ezhdl.modem_buf + 3, frame_size) == ((uint16_t)(ezhdl.modem_buf[frame_size + 3] << 8) | ezhdl.modem_buf[frame_size + 4])) {
-                        switch (ezhdl.modem_cb((char *)ezhdl.modem_buf + 3, frame_size)) {
+                        switch (ezhdl.modem_cb(ezhdl.modem_buf + 3, frame_size)) {
                         case M_SEND_NEXT:
                             last_packet_num++;
                             if (rev_file_info == 0) {
@@ -965,13 +989,17 @@ static ez_sta_t modem_start(void)
                 } else {
                     /* abort when frame goes wrong */
                     modem_reply(XYM_CAN);
-                    return EZ_ERR;
+                    ret = EZ_ERR;
+                    break;
                 }
             }
         }
     }
-    return EZ_OK;
+    return ret;
 }
+
+
+
 
 #endif /* USE_EZ_MODEM */
 
@@ -984,7 +1012,6 @@ void ezrb_destroy(ezrb_t *cb);
 
 /**
  * create a ringbuffer
- * @author Jinlin Deng
  */
 ezrb_t *ezrb_create(uint8_t len)
 {
@@ -1012,7 +1039,6 @@ ezrb_t *ezrb_create(uint8_t len)
 /**
  * push the data to buffer
  * @param  data :the data
- * @author Jinlin Deng
  */
 rb_sta_t ezrb_push(ezrb_t *rb, RB_DATA_T data)
 {
@@ -1032,7 +1058,6 @@ rb_sta_t ezrb_push(ezrb_t *rb, RB_DATA_T data)
 /**
  * get the data from buffer
  * @param  rev :the data received
- * @author Jinlin Deng
  */
 rb_sta_t ezrb_pop(ezrb_t *rb, RB_DATA_T *rev)
 {
@@ -1143,6 +1168,7 @@ ezstr_size_t estrlen(const char *_Str)
     }
     return s;
 }
+
 
 ezstr_ret_t estrcmp(const char *_Str1, const char *_Str2)
 {

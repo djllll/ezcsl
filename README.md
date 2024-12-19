@@ -2,7 +2,7 @@
 Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU terminal simulation
 
 ## Migration
-1. copy `ez*.c/h` to your project;
+1. copy `ezcsl.c/h  ezcsl_port.c/h` to your project;
 2. modify the file `ezcsl_port.c`;
     1. `ezport_receive_a_char` use to receive a character,call it in your receiver;
     2. write your own sending code in `ezport_send_str`
@@ -19,29 +19,45 @@ Ezcsl (Easy Console) is a console programming by C ,that can be used for MCU ter
 |Macro|Meaning|
 |:--:|:--:|
 |CSL_BUF_LEN|Terminal buffer size, which is the maximum number of characters that the terminal can input|
-|HISTORY_LEN     |Maximum number of history records|        
+|HISTORY_BUF_LEN     |History buffer size|        
 |PRINT_BUF_LEN   |Printf buffer size|
 |PARA_LEN_MAX    |Maximum number of parameters|
 |SPLIT_CHAR    |Split Character|
 |LOG_DEFINE    |Enable/Disable log level by macro|
-|USE_EZ_XMODEM    |choose MODEM|
+|USE_EZ_MODEM    |choose MODEM (EZ_NO_MODEM or EZ_YMODEM_1K)|
+
+# Tutorial
+## Command Unit
+
+## Parameters Description
+
+## Ymodem
+
+## 
 
 
 # Example 
-The code in this repository can work on Win
+The example can work on Win
 
-## How to run this example
+## How to run example(tcp server mode)
 1. clone this repo
 2. cd this repo
-3. `gcc *.c -o example`
-4. `./example`
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DTCP_MODE -o example` compile TCP_MODE
+4. run `example(.exe)`
+5. terminal 
+
+## How to run example(tcp server mode)
+1. clone this repo
+2. cd this repo
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DTCP_MODE -o example` compile TCP_MODE
+4. run `example(.exe)
 
 ## screenshot
 welcome  
-![](./screenshot/welcome.png)
+![](./docs/screenshot/welcome.png)
 
 autocomplete & prompt  
-![](./screenshot/autocomplete.gif)
+![](./docs/screenshot/autocomplete.gif)
 
 ## How to make a welcome-message?  
 [Text to ASCII Art Generator](https://patorjk.com/software/taag/)  
