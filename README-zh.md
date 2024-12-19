@@ -50,7 +50,7 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 5. 结束时调用`ezcsl_deinit`。
 
 简单创建一个test命令单元的主要代码，完整代码在example/main.c中：
-```
+```c
 int main(void){
     ezcsl_init();
     ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);
