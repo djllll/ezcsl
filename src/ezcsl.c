@@ -422,9 +422,9 @@ static void ezcsl_submit(void)
         if (estrncmp(ezhdl.modem_prefix, ezhdl.buf, estrlen(ezhdl.modem_prefix)) == 0) {
             ezhdl.modem_start_flag = 1;
             if (modem_start() == EZ_ERR) {
-                ezcsl_printf(COLOR_RED("Xmodem Timeout!\r\n"));
+                EZ_LOGE("MODEM","Timeout!");
             } else {
-                ezcsl_printf(COLOR_GREEN("Xmodem Success!\r\n"));
+                EZ_LOGI("MODEM","Success!");
             }
             ezcsl_reset_prefix();
             ezhdl.modem_start_flag = 0;

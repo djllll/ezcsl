@@ -165,6 +165,18 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
+#if (LOG_DEFINE & LOG_LEVEL_PRT)
+#define EZ_PRT(format, ...)                  \
+    do {                                     \
+        ezcsl_printf(format, ##__VA_ARGS__); \
+    } while (0)
+#else
+#define EZ_PRT(format, ...) \
+    {                       \
+        ;                   \
+    }
+#endif
+
 #define NSUDO 0
 #define SUDO  1
 
