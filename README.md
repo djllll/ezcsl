@@ -7,7 +7,7 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
     + [Autocomplete](#autocomplete)
     + [Ymodem transfers](#ymodem-transfers)
     + [Optional password simulation](#optional-password-simulation)
-  * [Migration](#migration)
+  * [Porting](#porting)
   * [Tutorial](#tutorial)
     + [Usage Process](#usage-process)
     + [Command Unit](#command-unit)
