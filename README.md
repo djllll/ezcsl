@@ -50,7 +50,7 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 2. Call `ezcsl_cmd_unit_create` to create a cmd unit (the first command).
 3. Call `ezcsl_cmd_register` to create your cmd (the second command).
 4. Call `ezcsl_tick` within a loop.
-5. Call `ezcsl_deinit` when shutting down.
+5. Call `ezcsl_deinit` before system shutting down.
 
 The main code for simply creating a test command unit, the complete code is in `example/main.c`:
 
