@@ -8,7 +8,7 @@
 extern "C" { 
 #endif 
 
-#define EZCSL_VERSION "v1.0.0"
+#define EZCSL_VERSION "v1.0.1"
 
 
 /* Ez Console */
