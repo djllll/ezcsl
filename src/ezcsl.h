@@ -177,8 +177,8 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
-#define NSUDO 0
-#define SUDO  1
+#define EZ_NSUDO 0
+#define EZ_SUDO  1
 
 
 /* Ez Ringbuffer */

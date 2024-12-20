@@ -134,18 +134,18 @@ int main(void)
 #endif
 
     /* EzCsl init */
-    ezcsl_init("\033[36mTEST:\033[m ", WELCOME, NULL);
+    ezcsl_init("\033[36mTEST:\033[m ", WELCOME, "ddww11");
 
     // EZ_LOGI("EzCsl","init ok");
 
     ezcsl_modem_set("rb", modem_rev_cb);
 
     /* add cmd */
-    ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);
+    ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", EZ_NSUDO, test_cmd_callback);
     ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
     ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
 
-    ez_cmd_unit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input", 1, echo_cmd_callback);
+    ez_cmd_unit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input", EZ_SUDO, echo_cmd_callback);
     ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ", "");
     ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'i'", "i");
     ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'sfi'", "sfi");

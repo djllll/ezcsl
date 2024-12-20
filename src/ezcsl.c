@@ -483,7 +483,7 @@ static void ezcsl_submit(void)
             match_ok_flag = 1;
             if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw != NULL) {
                 /* query sudo password */
-                ezcsl_printf("Please Input Sudo Password :\r\n");
+                ezcsl_printf("Password :\r\n");
                 ezcsl_reset_empty();
                 ezhdl.psw_inputing = 1;
                 return;
@@ -647,7 +647,7 @@ static void ezcsl_tabcomplete(void)
  * 
  * @param title_main 
  * @param describe 
- * @param need_sudo NSUDO or SUDO
+ * @param need_sudo EZ_NSUDO or EZ_SUDO
  * @param callback 
  * @return ez_cmd_unit_t* 
  */
