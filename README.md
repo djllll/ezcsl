@@ -5,7 +5,8 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
   * [Feature](#feature)
     + [Welcome](#welcome)
     + [Autocomplete](#autocomplete)
-    + [File transfers (Ymodem)](#file-transfers--ymodem-)
+    + [Ymodem transfers](#ymodem-transfers)
+    + [Optional password simulation](#optional-password-simulation)
   * [Migration](#migration)
   * [Tutorial](#tutorial)
     + [Usage Process](#usage-process)
@@ -29,8 +30,12 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 ### Autocomplete
 ![](./docs/screenshot/autocomplete.gif)
 
-### File transfers (Ymodem)
+### Ymodem transfers
 ![](./docs/screenshot/modem.gif)
+
+### Optional password simulation
+![](./docs/screenshot/psw.gif)
+
 
 ## Porting
 1. Copy the files under `src` to your project.

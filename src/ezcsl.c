@@ -2,7 +2,6 @@
 #include "stdio.h"  // vsprintf
 #include "stdlib.h" // malloc
 
-#define EZCSL_VERSION "v1.0.0"
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
@@ -355,6 +354,9 @@ uint8_t ezcsl_tick(void)
                         ezcsl_reset_prefix();
                         ezhdl.sudo_checked = 1;
                         ezhdl.psw_inputing = 0;
+                        /* submit again, TODO it looks not beautiful */
+                        last_history_to_buf(); 
+                        ezcsl_submit();
                     } else {
                         ezcsl_printf(COLOR_RED("\r\nWrong Password! Try again.\r\n"));
                         ezcsl_reset_empty();
@@ -752,7 +754,7 @@ static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 }
 
 
-static uint8_t last_load_hist = 0; // ugly flag...
+static uint8_t last_load_hist = 0; // history direction,its a ugly flag...
 /**
  * move the buf to history
  * @param

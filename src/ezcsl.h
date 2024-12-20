@@ -8,6 +8,8 @@
 extern "C" { 
 #endif 
 
+#define EZCSL_VERSION "v1.0.0"
+
 
 /* Ez Console */
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
