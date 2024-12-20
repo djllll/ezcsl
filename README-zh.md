@@ -3,6 +3,7 @@
     - [欢迎界面](#欢迎界面)
     - [自动补全](#自动补全)
     - [文件传输（Ymodem）](#文件传输（Ymodem）)
+    - [可选的密码模拟](#可选的密码模拟)
   - [移植](#移植)
   - [教程](#教程)
     - [使用流程](#使用流程)
@@ -34,6 +35,9 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 ### 文件传输（Ymodem）
 ![](./docs/screenshot/modem.gif)
 
+### 可选的密码模拟
+![](./docs/screenshot/psw.gif)
+
 ## 移植
 1. 将`src`下的文件复制到您的项目中。
 2. 修改`ezcsl_port.c`文件，加入您自己的`ezport_receive_a_char`的实现（用于接收字符,建议使用MCU中断接收）
@@ -50,7 +54,22 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 5. 结束时调用`ezcsl_deinit`。
 
 简单创建一个test命令单元的主要代码，完整代码在example/main.c中：
-```
+```c
+ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+{
+    switch (id) {
+    case TEST_ADD2_ID:
+        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
+        break;
+    case TEST_ADD3_ID:
+        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
+        break;
+    default:
+        break;
+    }
+    return CMD_FINISH;
+}
+
 int main(void){
     ezcsl_init();
     ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);

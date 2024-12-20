@@ -2,7 +2,6 @@
 #include "stdio.h"  // vsprintf
 #include "stdlib.h" // malloc
 
-#define EZCSL_VERSION "v1.0.0"
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
 #define XYMODEM_BUF_LEN 1030
@@ -355,6 +354,9 @@ uint8_t ezcsl_tick(void)
                         ezcsl_reset_prefix();
                         ezhdl.sudo_checked = 1;
                         ezhdl.psw_inputing = 0;
+                        /* submit again, TODO it looks not beautiful */
+                        last_history_to_buf(); 
+                        ezcsl_submit();
                     } else {
                         ezcsl_printf(COLOR_RED("\r\nWrong Password! Try again.\r\n"));
                         ezcsl_reset_empty();
@@ -483,7 +485,7 @@ static void ezcsl_submit(void)
             match_ok_flag = 1;
             if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw != NULL) {
                 /* query sudo password */
-                ezcsl_printf("Please Input Sudo Password :\r\n");
+                ezcsl_printf("Password :\r\n");
                 ezcsl_reset_empty();
                 ezhdl.psw_inputing = 1;
                 return;
@@ -647,7 +649,7 @@ static void ezcsl_tabcomplete(void)
  * 
  * @param title_main 
  * @param describe 
- * @param need_sudo NSUDO or SUDO
+ * @param need_sudo EZ_NSUDO or EZ_SUDO
  * @param callback 
  * @return ez_cmd_unit_t* 
  */
@@ -752,7 +754,7 @@ static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 }
 
 
-static uint8_t last_load_hist = 0; // ugly flag...
+static uint8_t last_load_hist = 0; // history direction,its a ugly flag...
 /**
  * move the buf to history
  * @param
@@ -893,7 +895,7 @@ static uint16_t crc16_modem(uint8_t *data, uint16_t length)
 static void modem_reply(uint8_t reply)
 {
     uint8_t sendbuf;
-    ezport_delay(1);
+    ezport_delay(10);
     sendbuf = reply;
     ezport_send_str((char *)&sendbuf, 1);
 }
@@ -995,6 +997,7 @@ static ez_sta_t modem_start(void)
             }
         }
     }
+    ezport_delay(1000); //
     return ret;
 }
 

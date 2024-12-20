@@ -8,6 +8,8 @@
 extern "C" { 
 #endif 
 
+#define EZCSL_VERSION "v1.0.1"
+
 
 /* Ez Console */
 #define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
@@ -177,8 +179,8 @@ extern void ezcsl_printf(const char *fmt, ...);
     }
 #endif
 
-#define NSUDO 0
-#define SUDO  1
+#define EZ_NSUDO 0
+#define EZ_SUDO  1
 
 
 /* Ez Ringbuffer */

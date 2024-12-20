@@ -5,8 +5,9 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
   * [Feature](#feature)
     + [Welcome](#welcome)
     + [Autocomplete](#autocomplete)
-    + [File transfers (Ymodem)](#file-transfers--ymodem-)
-  * [Migration](#migration)
+    + [Ymodem transfers](#ymodem-transfers)
+    + [Optional password simulation](#optional-password-simulation)
+  * [Porting](#porting)
   * [Tutorial](#tutorial)
     + [Usage Process](#usage-process)
     + [Command Unit](#command-unit)
@@ -29,8 +30,12 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 ### Autocomplete
 ![](./docs/screenshot/autocomplete.gif)
 
-### File transfers (Ymodem)
+### Ymodem transfers
 ![](./docs/screenshot/modem.gif)
+
+### Optional password simulation
+![](./docs/screenshot/psw.gif)
+
 
 ## Porting
 1. Copy the files under `src` to your project.
@@ -45,11 +50,27 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 2. Call `ezcsl_cmd_unit_create` to create a cmd unit (the first command).
 3. Call `ezcsl_cmd_register` to create your cmd (the second command).
 4. Call `ezcsl_tick` within a loop.
-5. Call `ezcsl_deinit` when shutting down.
+5. Call `ezcsl_deinit` before system shutting down.
 
 The main code for simply creating a test command unit, the complete code is in `example/main.c`:
 
 ```c
+ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+{
+    switch (id) {
+    case TEST_ADD2_ID:
+        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
+        break;
+    case TEST_ADD3_ID:
+        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
+        break;
+    default:
+        break;
+    }
+    return CMD_FINISH;
+}
+
+
 int main(void){
     ezcsl_init();
     ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);
