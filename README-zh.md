@@ -122,7 +122,7 @@ EZ_PRT：等同于printf
 ### 如何在TCP模式下运行示例
 1. 克隆此仓库。
 2. 进入此仓库的目录。
-3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DTCP_MODE -o example`
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -lpthread -DTCP_MODE -o example`
 4. 运行`example(.exe)`。
 5. 使用Putty、Windterm等连接到`localhost:3333`。
 ![](./docs/screenshot/puttycfg.png)
@@ -130,7 +130,7 @@ EZ_PRT：等同于printf
 ### 如何在cmd模式下运行示例
 1. 克隆此仓库。
 2. 进入此仓库的目录。
-3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DCMD_MODE -o example`
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -lpthread -DCMD_MODE -o example`
 4. 在支持ANSI的终端（如VSCode终端）中运行`example(.exe)`。
 
 ## 如何制作欢迎消息？

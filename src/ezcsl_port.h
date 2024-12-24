@@ -30,7 +30,7 @@ extern void ezport_receive_a_char(char c);
 #define HISTORY_BUF_LEN 40 // history record
 #define PRINT_BUF_LEN   150
 #define PARA_LEN_MAX    5
-#define SPLIT_CHAR      ','
+#define SPLIT_CHAR      ' '
 #define LOG_DEFINE      LOG_LEVEL_ALL // log level define
 #define USE_EZ_MODEM    EZ_YMODEM_1K
 
