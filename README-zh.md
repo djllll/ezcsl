@@ -89,21 +89,21 @@ int main(void){
 > 以上函数调用可参考example/main.c中test命令单元和echo命令单元。
 
 ### 参数描述
-i:整数
-f:浮点数
-s:字符串
+i:整数  
+f:浮点数  
+s:字符串  
 
 ### Ymodem
 通过`ezcsl_modem_set`设置Ymodem文件接收指令头和回调函数。当EzCsl终端接收到文件时，将调用该回调函数，其中第一次发送的数据帧为传输文件信息，当接收缓冲区指针为NULL时代表发送结束。
 > Ymodem传输可参考example/main.c中的处理方式。
 
 ### 日志模块
-EZ_LOGE：输出错误信息
-EZ_LOGD：输出调试信息
-EZ_LOGI：输出提示信息
-EZ_LOGV：输出普通信息
-EZ_PRTL：打印一行信息
-EZ_PRT：等同于printf
+EZ_LOGE：输出错误信息  
+EZ_LOGD：输出调试信息  
+EZ_LOGI：输出提示信息  
+EZ_LOGV：输出普通信息  
+EZ_PRTL：打印一行信息  
+EZ_PRT：等同于printf  
 
 ### 宏配置
 | 宏 | 含义 |
