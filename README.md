@@ -122,16 +122,16 @@ The example can work on Windows.
 
 ### How to run example in TCP mode
 1. Clone this repo.
-2. CD into this repo.
-3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DTCP_MODE -o example`
+2. cd into this repo.
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -lpthread -DTCP_MODE -o example`
 4. Run `example(.exe)`.
 5. Connect to `localhost:3333` using Putty, Windterm, etc.
 ![](./docs/screenshot/puttycfg.png)
 
 ### How to run example in cmd mode
 1. Clone this repo.
-2. CD into this repo.
-3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -DCMD_MODE -o example`
+2. cd into this repo.
+3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -lpthread -DCMD_MODE -o example`
 4. Run `example(.exe)` in a terminal with ANSI support (like VSCode terminal).
 
 ## How to make a welcome message?
