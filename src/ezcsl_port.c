@@ -6,8 +6,11 @@
 #include <windows.h>
 /* your include end */
 
+void ezport_custom_init(void);
 void ezport_send_str(char *str, uint16_t len);
 void ezport_delay(uint16_t ms);
+void ezport_rtos_mutex_lock(void);
+void ezport_rtos_mutex_unlock(void);
 
 
 
@@ -34,7 +37,6 @@ void ezport_send_str(char *str, uint16_t len)
 
 /**
  * @brief write your delay here
- * if you use EzCsl in multithreading , this function must can suspend current task
  * 
  * @param ms 
  */
@@ -42,5 +44,38 @@ void ezport_delay(uint16_t ms)
 {
     /** Write your code here ↓↓↓↓ */
     Sleep(ms);
+    /** Write your code here ↑↑↑↑ */
+}
+
+
+/**
+ * @brief custom init (Optional)
+ * 
+ */
+void ezport_custom_init(void){
+
+}
+
+
+/**
+ * @brief mutex lock (Necessary in RTOS)
+ * 
+ */
+void ezport_rtos_mutex_lock(void)
+{
+    /** Write your code here ↓↓↓↓ */
+    
+    /** Write your code here ↑↑↑↑ */
+}
+
+
+/**
+ * @brief mutex unlock (Necessary in RTOS)
+ * 
+ */
+void ezport_rtos_mutex_unlock(void)
+{
+    /** Write your code here ↓↓↓↓ */
+ 
     /** Write your code here ↑↑↑↑ */
 }
