@@ -178,6 +178,8 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 {
+    ezport_custom_init();
+
 #if USE_EZ_MODEM != 0
     ezhdl.modem_start_flag = 0;
     ezhdl.modem_prefix = NULL;
@@ -230,6 +232,7 @@ void ezcsl_deinit(void)
         s_free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
+    ezport_custom_deinit();
 }
 
 

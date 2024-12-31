@@ -7,6 +7,7 @@
 /* your include end */
 
 void ezport_custom_init(void);
+void ezport_custom_deinit(void);
 void ezport_send_str(char *str, uint16_t len);
 void ezport_delay(uint16_t ms);
 void ezport_rtos_mutex_lock(void);
@@ -52,9 +53,21 @@ void ezport_delay(uint16_t ms)
  * @brief custom init (Optional)
  * 
  */
-void ezport_custom_init(void){
+void ezport_custom_init(void)
+{
 
 }
+
+
+/**
+ * @brief custom deinit (Optional)
+ * 
+ */
+void ezport_custom_deinit(void)
+{
+    
+}
+
 
 
 /**

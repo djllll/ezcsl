@@ -26,6 +26,8 @@ extern void ezport_delay(uint16_t ms);
 extern void ezport_receive_a_char(char c);
 extern void ezport_rtos_mutex_lock(void);
 extern void ezport_rtos_mutex_unlock(void);
+extern void ezport_custom_init(void);
+extern void ezport_custom_deinit(void);
 
 
 /* Ez Configuration ,You are allowed to modify the following configurations.******************/
