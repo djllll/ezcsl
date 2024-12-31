@@ -1,6 +1,6 @@
 #include "ezcsl.h"
 #include "stdio.h"  // vsprintf
-#include "stdlib.h" // malloc
+#include "stdlib.h" // s_malloc
 
 
 #if USE_EZ_MODEM == EZ_YMODEM_1K
@@ -40,9 +40,6 @@ static struct EzCslHandleStruct {
     /* ringbuffer */
     ezrb_t *rb;
 
-    /* lock */
-    volatile uint8_t lock;
-
     /* log */
     ez_log_level_mask_t log_level_mask;
 
@@ -64,18 +61,6 @@ static struct EzCslHandleStruct {
 } ezhdl;
 
 
-#define LOCK()                    \
-    do {                          \
-        while (ezhdl.lock != 0) { \
-            ezport_delay(10);     \
-        };                        \
-        ezhdl.lock = 1;           \
-    } while (0)
-#define UNLOCK()        \
-    do {                \
-        ezhdl.lock = 0; \
-    } while (0)
-
 
 /* ez console port function */
 void ezport_receive_a_char(char c);
@@ -91,6 +76,8 @@ static ez_sta_t modem_start(void);
 static uint16_t crc16_modem(uint8_t *data, uint16_t length);
 static void modem_reply(uint8_t reply);
 #endif
+static void* s_malloc(uint16_t size);
+static void s_free(void *mem);
 static void ezcsl_reset_empty(void);
 static void ezcsl_tabcomplete(void);
 static void ezcsl_submit(void);
@@ -98,7 +85,6 @@ static void buf_to_history(void);
 static uint8_t load_history(void);
 static void last_history_to_buf(void);
 static void next_history_to_buf(void);
-
 static ez_cmd_t *cmd_head = NULL;
 static ez_cmd_unit_t *cmd_unit_head = NULL;
 ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *));
@@ -107,6 +93,32 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
 /* ez inner cmd */
 static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
 
+
+
+/**
+ * @brief 
+ * 
+ * @param size 
+ * @return void* 
+ */
+static void* s_malloc(uint16_t size){
+    ezport_rtos_mutex_lock();
+    void *p = malloc(size);
+    ezport_rtos_mutex_unlock();
+    return p;
+}
+
+
+/**
+ * @brief 
+ * 
+ * @param mem 
+ */
+static void s_free(void *mem){
+    ezport_rtos_mutex_lock();
+    free(mem);
+    ezport_rtos_mutex_unlock();
+}
 
 /**
  * @brief reset with prefix
@@ -166,6 +178,8 @@ void ezport_receive_a_char(char c)
  */
 void ezcsl_init(const char *prefix, const char *welcome, const char *sudo_psw)
 {
+    ezport_custom_init();
+
 #if USE_EZ_MODEM != 0
     ezhdl.modem_start_flag = 0;
     ezhdl.modem_prefix = NULL;
@@ -209,15 +223,16 @@ void ezcsl_deinit(void)
     while (p1 != NULL) {
         ez_cmd_t *p_del = p1;
         p1 = p1->next;
-        free(p_del);
+        s_free(p_del);
     }
     ez_cmd_unit_t *p2 = cmd_unit_head;
     while (p2 != NULL) {
         ez_cmd_unit_t *p_del = p2;
         p2 = p2->next;
-        free(p_del);
+        s_free(p_del);
     }
     ezrb_destroy(ezhdl.rb);
+    ezport_custom_deinit();
 }
 
 
@@ -401,7 +416,7 @@ uint8_t ezcsl_tick(void)
  */
 void ezcsl_printf(const char *fmt, ...)
 {
-    LOCK();
+    ezport_rtos_mutex_lock();
     uint16_t printed;
     va_list args;
     char dat_buf[PRINT_BUF_LEN];
@@ -409,7 +424,7 @@ void ezcsl_printf(const char *fmt, ...)
     printed = vsnprintf(dat_buf, PRINT_BUF_LEN, fmt, args);
     ezport_send_str(dat_buf, printed);
     va_end(args);
-    UNLOCK();
+    ezport_rtos_mutex_unlock();
 }
 
 
@@ -655,7 +670,6 @@ static void ezcsl_tabcomplete(void)
  */
 ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *))
 {
-    LOCK();
     if (estrlen(title_main) == 0 || estrlen(title_main) >= 10 || callback == NULL) {
         return NULL;
     }
@@ -663,13 +677,12 @@ ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describ
     ez_cmd_unit_t *p = cmd_unit_head;
     while (p != NULL) { // duplicate
         if (estrcmp(p->title_main, title_main) == 0) {
-            UNLOCK();
             return NULL;
         }
         p = p->next;
     }
 
-    ez_cmd_unit_t *p_add = (ez_cmd_unit_t *)malloc(sizeof(ez_cmd_unit_t));
+    ez_cmd_unit_t *p_add = (ez_cmd_unit_t *)s_malloc(sizeof(ez_cmd_unit_t));
     p_add->describe = CHECK_NULL_STR(describe);
     p_add->next = NULL;
     p_add->title_main = title_main;
@@ -686,7 +699,6 @@ ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describ
         p->next = p_add;
     }
 
-    UNLOCK();
     return p_add;
 }
 
@@ -711,7 +723,7 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
         p = p->next;
     }
 
-    ez_cmd_t *p_add = (ez_cmd_t *)malloc(sizeof(ez_cmd_t));
+    ez_cmd_t *p_add = (ez_cmd_t *)s_malloc(sizeof(ez_cmd_t));
     p_add->describe = CHECK_NULL_STR(describe);
     p_add->next = NULL;
     p_add->title_sub = CHECK_NULL_STR(title_sub);
@@ -1021,14 +1033,14 @@ ezrb_t *ezrb_create(uint8_t len)
     if (len < 1) {
         return NULL;
     }
-    ezrb_t *rb = (ezrb_t *)malloc(sizeof(ezrb_t));
+    ezrb_t *rb = (ezrb_t *)s_malloc(sizeof(ezrb_t));
     if (rb == NULL) {
         return NULL;
     }
     rb->head = 0;
     rb->tail = 0;
     rb->len = len;
-    rb->buffer = (RB_DATA_T *)malloc(sizeof(RB_DATA_T) * len);
+    rb->buffer = (RB_DATA_T *)s_malloc(sizeof(RB_DATA_T) * len);
     if (rb->buffer == NULL) {
         ezrb_destroy(rb);
         return NULL;
@@ -1081,11 +1093,11 @@ rb_sta_t ezrb_pop(ezrb_t *rb, RB_DATA_T *rev)
 void ezrb_destroy(ezrb_t *rb)
 {
     if (rb->buffer != NULL) {
-        free(rb->buffer);
+        s_free(rb->buffer);
         rb->buffer = NULL;
     }
     if (rb != NULL) {
-        free(rb);
+        s_free(rb);
         rb = NULL;
     }
 }

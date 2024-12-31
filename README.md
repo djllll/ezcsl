@@ -41,7 +41,10 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 1. Copy the files under `src` to your project.
 2. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_receive_a_char` (for receiving characters, it is recommended to use MCU interrupt reception).
 3. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_send_str` (for sending strings, it is recommended to use MCU blocking send).
-4. Completion.
+4. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_rtos_mutex_lock、ezport_rtos_mutex_unlock` (Mutex locks, necessary in multi-tasking).
+5. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_custom_init` (Optional custom initialization).
+6. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_custom_deinit` (Optional custom deinitialize).
+7. Completion.
 
 
 ## Tutorial
@@ -89,9 +92,9 @@ A command unit is equivalent to a collection of commands, such as `AT,cmd1`, `AT
 > The above function calls can be referenced in the test command unit and echo command unit in example/main.c.
 
 ### Parameter Description
-i: integer
-f: floating point number
-s: string
+i: integer  
+f: floating point number  
+s: string  
 
 ### Ymodem
 Set the Ymodem file reception instruction header and callback function using ezcsl_modem_set. When the EzCsl terminal receives a file, it will call this callback function, where the first data frame sent contains the file transfer information. A receive buffer pointer value of NULL indicates the end of transmission.
@@ -99,12 +102,12 @@ Set the Ymodem file reception instruction header and callback function using ezc
 > Ymodem transfer can be referenced in the handling method in example/main.c.
 
 ### Log Module
-EZ_LOGE: log error information
-EZ_LOGD: log debug information
-EZ_LOGI: log informative messages
-EZ_LOGV: log normal information
-EZ_PRTL: print a line of information
-EZ_PRT: equivalent to printf
+EZ_LOGE: log error information  
+EZ_LOGD: log debug information  
+EZ_LOGI: log informative messages  
+EZ_LOGV: log normal information  
+EZ_PRTL: print a line of information  
+EZ_PRT: equivalent to printf  
 
 ### Macro Configuration
 | Macro | Meaning |

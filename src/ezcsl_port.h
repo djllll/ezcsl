@@ -24,8 +24,14 @@ typedef unsigned char uint8_t;
 extern void ezport_send_str(char *str, uint16_t len);
 extern void ezport_delay(uint16_t ms);
 extern void ezport_receive_a_char(char c);
+extern void ezport_rtos_mutex_lock(void);
+extern void ezport_rtos_mutex_unlock(void);
+extern void ezport_custom_init(void);
+extern void ezport_custom_deinit(void);
 
-/* Ez Configuration */
+
+/* Ez Configuration ,You are allowed to modify the following configurations.******************/
+
 #define CSL_BUF_LEN     50 // console buf len (include prefix)
 #define HISTORY_BUF_LEN 40 // history record
 #define PRINT_BUF_LEN   150
