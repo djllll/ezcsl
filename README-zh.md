@@ -38,11 +38,14 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 ### 可选的密码模拟
 ![](./docs/screenshot/psw.gif)
 
-## 移植
+## 简单移植
 1. 将`src`下的文件复制到您的项目中。
 2. 修改`ezcsl_port.c`文件，加入您自己的`ezport_receive_a_char`的实现（用于接收字符,建议使用MCU中断接收）
 3. 修改`ezcsl_port.c`文件，加入您自己的`ezport_send_str`（用于发送字符串,建议使用MCU阻塞发送）的实现。
-4. 完成。
+4. 修改`ezcsl_port.c`文件，加入您自己的`ezport_rtos_mutex_lock、ezport_rtos_mutex_unlock`（互斥锁，在多任务中运行是必要的）的实现。
+5. 修改`ezcsl_port.c`文件，加入您自己的`ezport_custom_init`（在初始化时,可选的）的实现。
+6. 修改`ezcsl_port.c`文件，加入您自己的`ezport_custom_deinit`（在销毁时,可选的）的实现。
+7. 完成。
 
 
 ## 教程

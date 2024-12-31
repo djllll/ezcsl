@@ -41,7 +41,10 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 1. Copy the files under `src` to your project.
 2. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_receive_a_char` (for receiving characters, it is recommended to use MCU interrupt reception).
 3. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_send_str` (for sending strings, it is recommended to use MCU blocking send).
-4. Completion.
+4. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_rtos_mutex_lock、ezport_rtos_mutex_unlock` (Mutex locks, necessary in multi-tasking).
+5. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_custom_init` (Optional custom initialization).
+6. Modify the `ezcsl_port.c` file, adding your own implementation of `ezport_custom_deinit` (Optional custom deinitialize).
+7. Completion.
 
 
 ## Tutorial
