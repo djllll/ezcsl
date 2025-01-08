@@ -363,18 +363,17 @@ uint8_t ezcsl_tick(void)
                     buf_to_history();
                     ezcsl_submit();
                 } else {
-                    if (estrcmp(ezhdl.sudo_psw, ezhdl.buf) == 0) {
+                    if (estrcmp(ezhdl.sudo_psw,ezhdl.buf) == 0) {
                         /* password success */
-                        ezcsl_printf(COLOR_GREEN("\r\nPassword Checked!\r\n"));
-                        ezcsl_reset_prefix();
                         ezhdl.sudo_checked = 1;
                         ezhdl.psw_inputing = 0;
                         /* submit again, TODO it looks not beautiful */
                         last_history_to_buf(); 
                         ezcsl_submit();
                     } else {
-                        ezcsl_printf(COLOR_RED("\r\nWrong Password! Try again.\r\n"));
+                        ezcsl_printf(COLOR_RED("\r\nIncorrect Password! Try again.\r\n"));
                         ezcsl_reset_empty();
+                        ezcsl_printf("Password :");
                     }
                 }
             } else if (IS_CTRL_C(c)) {
@@ -500,8 +499,8 @@ static void ezcsl_submit(void)
             match_ok_flag = 1;
             if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw != NULL) {
                 /* query sudo password */
-                ezcsl_printf("Password :\r\n");
                 ezcsl_reset_empty();
+                ezcsl_printf("Password :");
                 ezhdl.psw_inputing = 1;
                 return;
             }
