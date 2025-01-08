@@ -15,6 +15,11 @@
 #define IS_CTRL_C(c)    ((c) == 0x03)
 #define IS_CTRL_D(c)    ((c) == 0x04)
 
+#define TIP_MAIN_CMD_DESC_LIST COLOR_GREEN("Main Command & Description List")
+#define TIP_SUB_CMD_DESC_LIST  COLOR_GREEN("Sub Command & Description List")
+#define TIP_SPLIT_LINE         COLOR_GREEN("=========================")
+#define TIP_INCORRECT_PSW      COLOR_RED("\r\nIncorrect Password! Try again.\r\n")
+#define TIP_PSW_INPUT          "Password :"
 
 #define EXPAND_DESC(c) ((c) == 's' ? "string" : ((c) == 'i' ? "integer" : ((c) == 'f' ? "float" : "unkown")))
 
@@ -371,9 +376,9 @@ uint8_t ezcsl_tick(void)
                         last_history_to_buf(); 
                         ezcsl_submit();
                     } else {
-                        ezcsl_printf(COLOR_RED("\r\nIncorrect Password! Try again.\r\n"));
+                        ezcsl_printf(TIP_INCORRECT_PSW);
                         ezcsl_reset_empty();
-                        ezcsl_printf("Password :");
+                        ezcsl_printf(TIP_PSW_INPUT);
                     }
                 }
             } else if (IS_CTRL_C(c)) {
@@ -500,7 +505,7 @@ static void ezcsl_submit(void)
             if (cmd_p->unit->need_sudo && !ezhdl.sudo_checked && ezhdl.sudo_psw != NULL) {
                 /* query sudo password */
                 ezcsl_reset_empty();
-                ezcsl_printf("Password :");
+                ezcsl_printf(TIP_PSW_INPUT);
                 ezhdl.psw_inputing = 1;
                 return;
             }
@@ -568,15 +573,15 @@ static void ezcsl_submit(void)
         break;
     case 1:
         cmd_p = cmd_head;
-        ezcsl_printf(COLOR_GREEN("Sub Command & Description List ") "\r\n");
-        ezcsl_printf(COLOR_GREEN("========================= ") "\r\n");
+        ezcsl_printf(TIP_SUB_CMD_DESC_LIST "\r\n");
+        ezcsl_printf(TIP_SPLIT_LINE "\r\n");
         while (cmd_p != NULL) {
             if (estrcmp(cmd_p->unit->title_main, maintitle) == 0) {
                 ezcsl_printf("%s,%s:  %s\r\n", cmd_p->unit->title_main, cmd_p->title_sub, cmd_p->describe);
             }
             cmd_p = cmd_p->next;
         }
-        ezcsl_printf(COLOR_GREEN("========================= ") "\r\n");
+        ezcsl_printf(TIP_SPLIT_LINE "\r\n");
         break;
     default:
         break;
@@ -754,13 +759,13 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
 static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 {
     ez_cmd_unit_t *p = cmd_unit_head;
-    ezcsl_printf(COLOR_GREEN("Main Command & Description List") " \r\n");
-    ezcsl_printf(COLOR_GREEN("=========================") " \r\n");
+    ezcsl_printf(TIP_MAIN_CMD_DESC_LIST "\r\n");
+    ezcsl_printf(TIP_SPLIT_LINE "\r\n");
     while (p != NULL) {
         ezcsl_printf("%-10s %s\r\n", p->title_main, p->describe);
         p = p->next;
     }
-    ezcsl_printf(COLOR_GREEN("=========================") " \r\n");
+    ezcsl_printf(TIP_SPLIT_LINE "\r\n");
     return CMD_FINISH;
 }
 
