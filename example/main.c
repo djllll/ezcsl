@@ -148,7 +148,7 @@ int main(void)
 #endif
 
     /* EzCsl init */
-    ezcsl_init("\033[36mTEST:\033[m ", WELCOME, "123456");
+    ezcsl_init(COLOR_CYAN("TEST:"), WELCOME, "123456");
 
     // EZ_LOGI("EzCsl","init ok");
 
