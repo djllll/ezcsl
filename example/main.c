@@ -64,7 +64,7 @@ ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case ECHO_NONE_ID:
-        EZ_PRTL("test", "your input is none ");
+        EZ_PRTL("your input is none ");
         break;
     case ECHO_ONE_ID:
         EZ_PRTL("your input :%d", EZ_PtoI(para[0]));
