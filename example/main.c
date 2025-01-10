@@ -83,6 +83,12 @@ void echo_cmd_callback(uint16_t id, ez_param_t *para)
 }
 
 
+/**
+ * @brief info command callback
+ * 
+ * @param id 
+ * @param para 
+ */
 void info_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
