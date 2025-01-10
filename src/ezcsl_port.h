@@ -23,7 +23,7 @@ typedef unsigned short uint16_t;
 typedef unsigned char uint8_t;
 
 
-/* Ez Function */
+/* Ez Function ,Donnot Modify */
 extern void ezport_send_str(char *str, uint16_t len);
 extern void ezport_delay(uint16_t ms);
 extern void ezport_receive_a_char(char c);
