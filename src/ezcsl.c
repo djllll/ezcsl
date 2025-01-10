@@ -54,7 +54,7 @@ static struct EzCslHandleStruct {
     uint8_t modem_buf[XYMODEM_BUF_LEN];
     uint16_t modem_p;
     const char *modem_prefix;
-    modem_rev_func_t (*modem_cb)(char *, uint16_t);
+    modem_rev_func_t (*modem_cb)(modem_file_t *); // filename,filesize,buf,buflen
 #endif
     /* sudo */
     const char *sudo_psw;
@@ -76,7 +76,7 @@ uint8_t ezcsl_tick(void);
 void ezcsl_reset_prefix(void);
 void ezcsl_printf(const char *fmt, ...);
 #if USE_EZ_MODEM != 0
-void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *, uint16_t));
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(modem_file_t *));
 static ez_sta_t modem_start(void);
 static uint16_t crc16_modem(uint8_t *data, uint16_t length);
 static void modem_reply(uint8_t reply);
@@ -872,7 +872,7 @@ static void next_history_to_buf(void)
  *      @param char* buffer pointer
  *      @param uint16_t buffer length
  */
-void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(char *, uint16_t))
+void ezcsl_modem_set(const char *modem_prefix, modem_rev_func_t (*cb_func)(modem_file_t *))
 {
     ezhdl.modem_prefix = modem_prefix;
     ezhdl.modem_cb = cb_func;
@@ -936,6 +936,14 @@ static ez_sta_t modem_start(void)
 
     /* start receiving */
     ez_sta_t ret = EZ_ERR;
+    modem_file_t file={
+        .frame_type = FILE_TRANS_OVER,
+        .content = NULL,
+        .contentlen = 0,
+        .filename = NULL,
+        .filesize = 0,
+        .filesize_received = 0,
+    };
     while (1) {
         if (bufp_last_time_out == ezhdl.modem_p) {
             ezport_delay(1);
@@ -964,7 +972,8 @@ static ez_sta_t modem_start(void)
                     ezport_delay(1000);
                     modem_reply(XYM_ACK);
                     modem_reply(XYM_C);
-                    ezhdl.modem_cb(NULL, 0);
+                    file.frame_type = FILE_TRANS_OVER;
+                    ezhdl.modem_cb(&file);
                     ret = EZ_OK;
                     break;
                 }
@@ -979,8 +988,20 @@ static ez_sta_t modem_start(void)
             if (ezhdl.modem_p == frame_size + 5 && frame_size != 0) {
                 ezhdl.modem_p = 0;
                 if (ezhdl.modem_buf[1] == (uint8_t)(last_packet_num) && ezhdl.modem_buf[1] == (uint8_t)(~ezhdl.modem_buf[2])) {
-                    if (crc16_modem(ezhdl.modem_buf + 3, frame_size) == ((uint16_t)(ezhdl.modem_buf[frame_size + 3] << 8) | ezhdl.modem_buf[frame_size + 4])) {
-                        switch (ezhdl.modem_cb(ezhdl.modem_buf + 3, frame_size)) {
+                    uint8_t *rev_without_head = ezhdl.modem_buf + 3;
+                    if (crc16_modem(rev_without_head, frame_size) == ((uint16_t)(ezhdl.modem_buf[frame_size + 3] << 8) | ezhdl.modem_buf[frame_size + 4])) {
+                        if(file.filename==NULL){
+                            file.frame_type = FILE_INFO_ONLY;
+                            file.filesize_received = 0;
+                            file.filename = (const char*)rev_without_head;
+                            file.filesize = (uint32_t)atoi(rev_without_head + estrlen_s(rev_without_head, frame_size) + 1);
+                           }else{
+                            file.frame_type = FILE_INFO_AND_CONTENT;
+                            file.content = (char *)rev_without_head;
+                            file.filesize_received += frame_size;
+                            file.contentlen = file.filesize_received > file.filesize ? frame_size - (file.filesize_received - file.filesize) : frame_size;
+                        }
+                        switch (ezhdl.modem_cb(&file)) {
                         case M_SEND_NEXT:
                             last_packet_num++;
                             if (rev_file_info == 0) {
@@ -990,7 +1011,6 @@ static ez_sta_t modem_start(void)
                             } else {
                                 modem_reply(XYM_ACK);
                             }
-
                             break;
                         case M_SEND_REPEAT:
                             modem_reply(XYM_NAK);

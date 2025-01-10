@@ -62,7 +62,20 @@ typedef enum{
     M_SEND_ABORT
 }modem_rev_func_t;
 
-extern void ezcsl_modem_set(const char *modem_prefix,modem_rev_func_t (*cb_func)(char *,uint16_t));
+typedef struct{
+    enum{
+        FILE_INFO_ONLY = 0,
+        FILE_INFO_AND_CONTENT,
+        FILE_TRANS_OVER
+    }frame_type;
+    const char* filename;
+    uint32_t filesize;
+    uint32_t filesize_received;
+    char *content;
+    uint16_t contentlen;
+}modem_file_t;
+
+extern void ezcsl_modem_set(const char *modem_prefix,modem_rev_func_t (*cb_func)(modem_file_t *));
 #endif
 
 extern void ezcsl_init(const char *prefix ,const char *welcome,const char *sudo_psw);

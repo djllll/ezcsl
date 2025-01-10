@@ -104,35 +104,27 @@ ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
  * @param len 
  * @return modem_rev_func_t 
  */
-static modem_rev_func_t modem_rev_cb(char *rev, uint16_t len)
+static modem_rev_func_t modem_rev_cb(modem_file_t *file)
 {
-    static int filesize = 0;
     static FILE *f;
-    if (rev != NULL) {
-        if (filesize == 0) {
-            const char *filename = rev;
-            filesize = atoi(rev + strnlen(rev, len) + 1);
-            printf("FileName:%s\r\n", filename);
-            printf("FileSize:%d\r\n", filesize);
-            f = fopen(filename, "w");
-            fwrite("", 0, 1, f);
-            fclose(f);
-            f = fopen(filename, "ab");
-        } else {
-            if (filesize > len) {
-                filesize -= len;
-            } else {
-                len = filesize;
-            }
-            size_t written = fwrite(rev, len, 1, f);
-        }
-    } else {
-        filesize = 0;
+    switch (file->frame_type) {
+    case FILE_INFO_ONLY:
+        f = fopen(file->filename, "w");
+        fwrite("", 0, 1, f);
         fclose(f);
+        f = fopen(file->filename, "ab");
+        break;
+    case FILE_INFO_AND_CONTENT:
+        fwrite(file->content, file->contentlen, 1, f);
+        break;
+    case FILE_TRANS_OVER:
+        fclose(f);
+        break;
+    default:
+        break;
     }
     return M_SEND_NEXT;
 }
-
 
 
 /**
