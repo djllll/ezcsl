@@ -35,9 +35,8 @@
  * 
  * @param id 
  * @param para 
- * @return ez_cmd_ret_t 
  */
-ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+void test_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case TEST_ADD2_ID:
@@ -49,7 +48,6 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 
@@ -58,9 +56,8 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
  * 
  * @param id 
  * @param para 
- * @return ez_cmd_ret_t 
  */
-ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
+void echo_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case ECHO_NONE_ID:
@@ -73,19 +70,20 @@ ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
         EZ_PRTL("your input :%s f:%f i:%d", EZ_PtoS(para[0]), EZ_PtoF(para[1]), EZ_PtoI(para[2]));
         break;
     case ECHO_TIME_ID: {
-        time_t now_time;
-        time(&now_time);
-        EZ_PRTL("=> %s", ctime(&now_time));
-        return CMD_TIMEOUT_1000MS_AGAIN;
+        while(!cmd_break_signal()){
+            ezport_delay(1000);
+            time_t now_time;
+            time(&now_time);
+            EZ_PRTL("=> %s", ctime(&now_time));
+        }
     } break;
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 
-ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
+void info_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case INFO_VERSION_ID:
@@ -94,7 +92,6 @@ ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 /**

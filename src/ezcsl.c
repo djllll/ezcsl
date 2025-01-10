@@ -62,7 +62,7 @@ static struct EzCslHandleStruct {
     uint8_t psw_inputing;
 
     /* occupy */
-    uint8_t csl_occupied;
+    volatile uint8_t csl_occupied;
 } ezhdl;
 
 
@@ -92,11 +92,12 @@ static void last_history_to_buf(void);
 static void next_history_to_buf(void);
 static ez_cmd_t *cmd_head = NULL;
 static ez_cmd_unit_t *cmd_unit_head = NULL;
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *));
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *));
 ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc);
+uint8_t cmd_break_signal(void);
 
 /* ez inner cmd */
-static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
+static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
 
 
 
@@ -532,26 +533,9 @@ static void ezcsl_submit(void)
                     }
 
                     /**** execute start ****/
-                    while (1) {
-                        ez_cmd_ret_t ret = cmd_p->unit->callback(cmd_p->id, para); // user can use `ezcsl_printf` in callback
-                        if (ret == CMD_FINISH) {
-                            break;
-                        } else {
-                            uint16_t timeout_cnt = 0;
-                            uint8_t timeout_exit = 0;
-                            ezhdl.csl_occupied = 1;
-                            while (timeout_cnt < (uint16_t)ret) {
-                                ezport_delay(10);
-                                timeout_cnt += 10;
-                                if (!ezhdl.csl_occupied) {
-                                    timeout_exit = 1;
-                                }
-                            }
-                            if(timeout_exit){
-                                break;
-                            }
-                        }
-                    }
+                    ezhdl.csl_occupied = 1;
+                    cmd_p->unit->callback(cmd_p->id, para);
+                    ezhdl.csl_occupied = 0;
                     /**** execute end ****/
 
                 } else {
@@ -672,7 +656,7 @@ static void ezcsl_tabcomplete(void)
  * @param callback 
  * @return ez_cmd_unit_t* 
  */
-ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t, ez_param_t *))
+ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *))
 {
     if (estrlen(title_main) == 0 || estrlen(title_main) >= 10 || callback == NULL) {
         return NULL;
@@ -749,6 +733,14 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
     return EZ_OK;
 }
 
+/**
+ * @brief break signal query
+ * 
+ * @return uint8_t 
+ */
+uint8_t cmd_break_signal(void){
+    return !ezhdl.csl_occupied;
+}
 
 /**
  * @brief help cmd callback
@@ -756,7 +748,7 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
  * @param id cmd id
  * @param para param
  */
-static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
+static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
 {
     ez_cmd_unit_t *p = cmd_unit_head;
     ezcsl_printf(TIP_MAIN_CMD_DESC_LIST "\r\n");
@@ -766,7 +758,6 @@ static ez_cmd_ret_t ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para)
         p = p->next;
     }
     ezcsl_printf(TIP_SPLIT_LINE "\r\n");
-    return CMD_FINISH;
 }
 
 

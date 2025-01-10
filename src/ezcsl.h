@@ -24,20 +24,11 @@ typedef enum{
     EZ_ERR
 }ez_sta_t;
 
-typedef enum CmdReturn {
-    CMD_FINISH = 0,
-    CMD_TIMEOUT_10MS_AGAIN = 10,
-    CMD_TIMEOUT_100MS_AGAIN = 100,
-    CMD_TIMEOUT_1000MS_AGAIN = 1000,
-    CMD_TIMEOUT_2000MS_AGAIN = 2000,
-    CMD_TIMEOUT_5000MS_AGAIN = 5000,
-} ez_cmd_ret_t;
-
 
 typedef struct CmdUnitObj{
     const char *title_main;
     const char *describe;
-    ez_cmd_ret_t (*callback)(uint16_t ,ez_param_t*);
+    void (*callback)(uint16_t ,ez_param_t*);
     struct CmdUnitObj *next;
     uint8_t need_sudo;
 }ez_cmd_unit_t;
@@ -83,11 +74,12 @@ extern void ezcsl_deinit(void);
 extern uint8_t ezcsl_tick(void);
 extern void ezcsl_reset_prefix(void);
 
-extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,uint8_t need_sudo, ez_cmd_ret_t (*callback)(uint16_t,ez_param_t*));
+extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *describe ,uint8_t need_sudo, void (*callback)(uint16_t,ez_param_t*));
 extern ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char* para_desc);
 extern void ezport_send_str(char *str, uint16_t len);
 extern void ezcsl_printf(const char *fmt, ...);
-
+extern uint8_t cmd_break_signal(void);
+ 
 
 #define MOVE_CURSOR_ABS(n)      "\033["#n"G"
 #define ERASE_TO_END()          "\033[K"
