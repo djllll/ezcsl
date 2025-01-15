@@ -56,34 +56,7 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 4. 在循环中调用`ezcsl_tick`。
 5. 结束时调用`ezcsl_deinit`。
 
-简单创建一个test命令单元的主要代码，完整代码在example/main.c中：
-```c
-ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
-{
-    switch (id) {
-    case TEST_ADD2_ID:
-        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
-        break;
-    case TEST_ADD3_ID:
-        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
-        break;
-    default:
-        break;
-    }
-    return CMD_FINISH;
-}
-
-int main(void){
-    ezcsl_init();
-    ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);
-    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
-
-    while (!ezcsl_tick())
-        ;
-    ezcsl_deinit();
-}
-```
+> 完整代码在example/main.c中。
 
 ### 命令单元
 命令单元相当于一系列命令的合集，例如`AT,cmd1`,`AT,cmd2`……都属于AT命令单元，每个命令单元拥有一个回调函数，
@@ -136,7 +109,12 @@ EZ_PRT：等同于printf
 3. `gcc ./example/*.c ./src/*.c -Iexample -Isrc -lws2_32 -lpthread -DCMD_MODE -o example`
 4. 在支持ANSI的终端（如VSCode终端）中运行`example(.exe)`。
 
-## 如何制作欢迎消息？
+## 如何升级
+|版本变化|升级方式|
+| --- | --- |
+|v1.1.0 -> v1.x.x|替换`ezcsl.c`和`ezcsl.h`文件即可|
+
+## 如何制作欢迎消息
 [Text to ASCII Art Generator](https://patorjk.com/software/taag/)
 
 ## TODO

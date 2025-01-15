@@ -35,9 +35,8 @@
  * 
  * @param id 
  * @param para 
- * @return ez_cmd_ret_t 
  */
-ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+void test_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case TEST_ADD2_ID:
@@ -49,7 +48,6 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 
@@ -58,13 +56,12 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
  * 
  * @param id 
  * @param para 
- * @return ez_cmd_ret_t 
  */
-ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
+void echo_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case ECHO_NONE_ID:
-        EZ_PRTL("test", "your input is none ");
+        EZ_PRTL("your input is none ");
         break;
     case ECHO_ONE_ID:
         EZ_PRTL("your input :%d", EZ_PtoI(para[0]));
@@ -73,19 +70,26 @@ ez_cmd_ret_t echo_cmd_callback(uint16_t id, ez_param_t *para)
         EZ_PRTL("your input :%s f:%f i:%d", EZ_PtoS(para[0]), EZ_PtoF(para[1]), EZ_PtoI(para[2]));
         break;
     case ECHO_TIME_ID: {
-        time_t now_time;
-        time(&now_time);
-        EZ_PRTL("=> %s", ctime(&now_time));
-        return CMD_TIMEOUT_1000MS_AGAIN;
+        while(!ezcsl_break_signal()){
+            ezport_delay(1000);
+            time_t now_time;
+            time(&now_time);
+            EZ_PRTL("=> %s", ctime(&now_time));
+        }
     } break;
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 
-ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
+/**
+ * @brief info command callback
+ * 
+ * @param id 
+ * @param para 
+ */
+void info_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case INFO_VERSION_ID:
@@ -94,7 +98,6 @@ ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 /**
@@ -104,35 +107,27 @@ ez_cmd_ret_t info_cmd_callback(uint16_t id, ez_param_t *para)
  * @param len 
  * @return modem_rev_func_t 
  */
-static modem_rev_func_t modem_rev_cb(char *rev, uint16_t len)
+static modem_rev_func_t modem_rev_cb(modem_file_t *file)
 {
-    static int filesize = 0;
     static FILE *f;
-    if (rev != NULL) {
-        if (filesize == 0) {
-            const char *filename = rev;
-            filesize = atoi(rev + strnlen(rev, len) + 1);
-            printf("FileName:%s\r\n", filename);
-            printf("FileSize:%d\r\n", filesize);
-            f = fopen(filename, "w");
-            fwrite("", 0, 1, f);
-            fclose(f);
-            f = fopen(filename, "ab");
-        } else {
-            if (filesize > len) {
-                filesize -= len;
-            } else {
-                len = filesize;
-            }
-            size_t written = fwrite(rev, len, 1, f);
-        }
-    } else {
-        filesize = 0;
+    switch (file->frame_type) {
+    case FILE_INFO_ONLY:
+        f = fopen(file->filename, "w");
+        fwrite("", 0, 1, f);
         fclose(f);
+        f = fopen(file->filename, "ab");
+        break;
+    case FILE_INFO_AND_CONTENT:
+        fwrite(file->content, file->contentlen, 1, f);
+        break;
+    case FILE_TRANS_OVER:
+        fclose(f);
+        break;
+    default:
+        break;
     }
     return M_SEND_NEXT;
 }
-
 
 
 /**
@@ -148,7 +143,7 @@ int main(void)
 #endif
 
     /* EzCsl init */
-    ezcsl_init("\033[36mTEST:\033[m ", WELCOME, "123456");
+    ezcsl_init(COLOR_CYAN("TEST:"), WELCOME, "123456");
 
     // EZ_LOGI("EzCsl","init ok");
 
@@ -156,17 +151,17 @@ int main(void)
 
     /* add cmd */
     ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", EZ_NSUDO, test_cmd_callback);
-    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
+    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", EZ_PARAM_INT EZ_PARAM_INT);
+    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", EZ_PARAM_INT EZ_PARAM_INT EZ_PARAM_INT);
 
     ez_cmd_unit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input", EZ_NSUDO, echo_cmd_callback);
-    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ", "");
-    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'int'", "i");
-    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'str,float,int'", "sfi");
+    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ", EZ_PARAM_NONE);
+    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'int'", EZ_PARAM_INT);
+    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'str,float,int'", EZ_PARAM_STR EZ_PARAM_FLOAT EZ_PARAM_INT);
     ezcsl_cmd_register(echo_unit, ECHO_TIME_ID, "time", "time echo", "");
 
     ez_cmd_unit_t *info_unit = ezcsl_cmd_unit_create("info", "software info", EZ_SUDO, info_cmd_callback);
-    ezcsl_cmd_register(info_unit, INFO_VERSION_ID, "version", "", "");
+    ezcsl_cmd_register(info_unit, INFO_VERSION_ID, "version", "", EZ_PARAM_NONE);
 
 /* input */
 #ifdef CMD_MODE
