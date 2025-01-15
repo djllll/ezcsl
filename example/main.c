@@ -70,7 +70,7 @@ void echo_cmd_callback(uint16_t id, ez_param_t *para)
         EZ_PRTL("your input :%s f:%f i:%d", EZ_PtoS(para[0]), EZ_PtoF(para[1]), EZ_PtoI(para[2]));
         break;
     case ECHO_TIME_ID: {
-        while(!cmd_break_signal()){
+        while(!ezcsl_break_signal()){
             ezport_delay(1000);
             time_t now_time;
             time(&now_time);

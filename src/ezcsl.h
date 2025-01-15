@@ -78,7 +78,7 @@ extern ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main,const char *d
 extern ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char* para_desc);
 extern void ezport_send_str(char *str, uint16_t len);
 extern void ezcsl_printf(const char *fmt, ...);
-extern uint8_t cmd_break_signal(void);
+extern uint8_t ezcsl_break_signal(void);
  
 
 #define MOVE_CURSOR_ABS(n)      "\033["#n"G"

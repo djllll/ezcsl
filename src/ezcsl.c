@@ -94,7 +94,7 @@ static ez_cmd_t *cmd_head = NULL;
 static ez_cmd_unit_t *cmd_unit_head = NULL;
 ez_cmd_unit_t *ezcsl_cmd_unit_create(const char *title_main, const char *describe, uint8_t need_sudo, void (*callback)(uint16_t, ez_param_t *));
 ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_sub, const char *describe, const char *para_desc);
-uint8_t cmd_break_signal(void);
+uint8_t ezcsl_break_signal(void);
 
 /* ez inner cmd */
 static void ezcsl_cmd_help_callback(uint16_t id, ez_param_t *para);
@@ -738,7 +738,7 @@ ez_sta_t ezcsl_cmd_register(ez_cmd_unit_t *unit, uint16_t id, const char *title_
  * 
  * @return uint8_t 
  */
-uint8_t cmd_break_signal(void){
+uint8_t ezcsl_break_signal(void){
     return !ezhdl.csl_occupied;
 }
 
