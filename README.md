@@ -55,35 +55,7 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 4. Call `ezcsl_tick` within a loop.
 5. Call `ezcsl_deinit` before system shutting down.
 
-The main code for simply creating a test command unit, the complete code is in `example/main.c`:
-
-```c
-void test_cmd_callback(uint16_t id, ez_param_t *para)
-{
-    switch (id) {
-    case TEST_ADD2_ID:
-        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]));
-        break;
-    case TEST_ADD3_ID:
-        EZ_PRTL("result is %d", EZ_PtoI(para[0]) + EZ_PtoI(para[1]) + EZ_PtoI(para[2]));
-        break;
-    default:
-        break;
-    }
-}
-
-
-int main(void){
-    ezcsl_init();
-    ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", 0, test_cmd_callback);
-    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
-
-    while (!ezcsl_tick())
-        ;
-    ezcsl_deinit();
-}
-```
+> The complete code is in `example/main.c`.
 
 ### Command Unit
 A command unit is equivalent to a collection of commands, such as `AT,cmd1`, `AT,cmd2`... all belong to the AT command unit. Each command unit has a callback function, and all calls to commands will go through this callback function of its belonging unit (distinguished by custom ID).
