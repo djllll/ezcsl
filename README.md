@@ -58,7 +58,7 @@ EzCsl (Easy Console) is a C console that can be used for MCU terminal simulation
 The main code for simply creating a test command unit, the complete code is in `example/main.c`:
 
 ```c
-ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+void test_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case TEST_ADD2_ID:
@@ -70,7 +70,6 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 

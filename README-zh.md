@@ -58,7 +58,7 @@ EzCSL（Easy Console）是一个C语言控制台程序，可用于MCU终端仿�
 
 简单创建一个test命令单元的主要代码，完整代码在example/main.c中：
 ```c
-ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
+void test_cmd_callback(uint16_t id, ez_param_t *para)
 {
     switch (id) {
     case TEST_ADD2_ID:
@@ -70,7 +70,6 @@ ez_cmd_ret_t test_cmd_callback(uint16_t id, ez_param_t *para)
     default:
         break;
     }
-    return CMD_FINISH;
 }
 
 int main(void){
