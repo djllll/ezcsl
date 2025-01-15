@@ -12,10 +12,14 @@ extern "C" {
 
 
 /* Ez Console */
-#define EZ_PtoS(param) ((const char*)(param))   //ez_param_t => string
-#define EZ_PtoI(param) (*(int*)(param))         //ez_param_t => integer
-#define EZ_PtoF(param) (*(float*)(param))       //ez_param_t => float
-#define ez_param_t      void*
+#define EZ_PtoS(param)   ((const char *)(param)) // ez_param_t => string
+#define EZ_PtoI(param)   (*(int *)(param))       // ez_param_t => integer
+#define EZ_PtoF(param)   (*(float *)(param))     // ez_param_t => float
+#define EZ_PARAM_NONE          ""
+#define EZ_PARAM_INT           "i"
+#define EZ_PARAM_FLOAT         "f"
+#define EZ_PARAM_STR           "s"
+#define ez_param_t       void *
 
 typedef uint8_t ez_log_level_mask_t;
 

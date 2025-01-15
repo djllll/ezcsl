@@ -539,7 +539,7 @@ static void ezcsl_submit(void)
                     /**** execute end ****/
 
                 } else {
-                    ezcsl_printf("\033[31mWrong format!\033[m %s,%s", maintitle, subtitle);
+                    ezcsl_printf("\033[31mIncorrect format!\033[m %s,%s", maintitle, subtitle);
                     for (uint8_t i = 0; i < cmd_p->para_num; i++) {
                         ezcsl_printf(",<%s>", EXPAND_DESC(cmd_p->para_desc[i]));
                     }
@@ -985,7 +985,7 @@ static ez_sta_t modem_start(void)
                             file.frame_type = FILE_INFO_ONLY;
                             file.filesize_received = 0;
                             file.filename = (const char*)rev_without_head;
-                            file.filesize = (uint32_t)atoi(rev_without_head + estrlen_s(rev_without_head, frame_size) + 1);
+                            file.filesize = (uint32_t)atoi((const char*)rev_without_head + estrlen_s((const char *)rev_without_head, frame_size) + 1);
                            }else{
                             file.frame_type = FILE_INFO_AND_CONTENT;
                             file.content = (char *)rev_without_head;

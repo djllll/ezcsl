@@ -151,17 +151,17 @@ int main(void)
 
     /* add cmd */
     ez_cmd_unit_t *test_unit = ezcsl_cmd_unit_create("test", "add test callback", EZ_NSUDO, test_cmd_callback);
-    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", "ii");
-    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", "iii");
+    ezcsl_cmd_register(test_unit, TEST_ADD2_ID, "add2", "add,a,b", EZ_PARAM_INT EZ_PARAM_INT);
+    ezcsl_cmd_register(test_unit, TEST_ADD3_ID, "add3", "add,a,b,c", EZ_PARAM_INT EZ_PARAM_INT EZ_PARAM_INT);
 
     ez_cmd_unit_t *echo_unit = ezcsl_cmd_unit_create("echo", "echo your input", EZ_NSUDO, echo_cmd_callback);
-    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ", "");
-    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'int'", "i");
-    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'str,float,int'", "sfi");
+    ezcsl_cmd_register(echo_unit, ECHO_NONE_ID, "none", "input ", EZ_PARAM_NONE);
+    ezcsl_cmd_register(echo_unit, ECHO_ONE_ID, "one", "input 'int'", EZ_PARAM_INT);
+    ezcsl_cmd_register(echo_unit, ECHO_MUL_ID, "mul", "input 'str,float,int'", EZ_PARAM_STR EZ_PARAM_FLOAT EZ_PARAM_INT);
     ezcsl_cmd_register(echo_unit, ECHO_TIME_ID, "time", "time echo", "");
 
     ez_cmd_unit_t *info_unit = ezcsl_cmd_unit_create("info", "software info", EZ_SUDO, info_cmd_callback);
-    ezcsl_cmd_register(info_unit, INFO_VERSION_ID, "version", "", "");
+    ezcsl_cmd_register(info_unit, INFO_VERSION_ID, "version", "", EZ_PARAM_NONE);
 
 /* input */
 #ifdef CMD_MODE
